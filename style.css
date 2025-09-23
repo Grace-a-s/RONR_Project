@@ -1,7 +1,15 @@
-body{
+html, body{
     background-color: #c7f9cc;
     margin: 0;
     padding: 0;
+}
+.main_body{
+    height: 100vh;
+    display: grid;
+    grid-template-rows: 3fr 1fr;
+    grid-template-columns: 1fr;
+    grid-template-areas: 'motion'
+                         'user';
 }
 .top_bar{
     background-color:white;
@@ -26,12 +34,21 @@ body{
 }
 
 .motion_box{
+    width: 850px; 
     background-color: #57cc99;
     padding: 10px;
     display: grid;
     align-items: space-between;
-    margin: 20px;
+    grid-area: motion;
+    place-self: center;
+
 }
+
+.user_bar{
+    background-color:#22577A;
+    grid-area: user;
+}
+
 .motion{
     background-color: lightgray;
     padding: 10px;
@@ -54,6 +71,7 @@ body{
     margin-top: 5px;
 }*/
 .motion_button{
+    height: 20px;
     background-color: #38A3A5;
     padding: 5px;
     border-radius: 15%;
