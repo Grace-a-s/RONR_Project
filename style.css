@@ -2,9 +2,10 @@ html, body{
     background-color: #c7f9cc;
     margin: 0;
     padding: 0;
+    /*height: 100%; this does not work for some reason, also tried 100vh*/
 }
 .main_body{
-    height: 100vh;
+    height: calc(100vh - 46.2px); /*not ideal*/
     display: grid;
     grid-template-rows: 3fr 1fr;
     grid-template-columns: 1fr;
@@ -47,8 +48,14 @@ html, body{
 .user_bar{
     background-color:#22577A;
     grid-area: user;
+    display: grid;
+    grid-template-rows: 1fp;
+    grid-template-columns: 1fp 3fp 2fp;
+    grid-template-areas: 'none text buttons'
+    
 }
 
+/*parts of motion box (motion, bottom_motion (buttons), */
 .motion{
     background-color: lightgray;
     padding: 10px;
@@ -57,6 +64,14 @@ html, body{
 .bottom_motion{
     display:flex;
     justify-content: space-between;
+}
+
+.text_input{
+    background-color: white;
+    padding: 10px; 
+    margin: 20px;
+    margin-right: 5px;
+    grid-area: text;
 }
 /*.debate_button{
     background-color: #38A3A5;
@@ -70,7 +85,7 @@ html, body{
     border-radius: 15%;
     margin-top: 5px;
 }*/
-.motion_button{
+.button{
     height: 20px;
     background-color: #38A3A5;
     padding: 5px;
@@ -89,4 +104,17 @@ html, body{
     display: flex;
     justify-content: center;
     align-items: center;
+}
+
+/*user_bar elements (prop_vote_button and send_button)*/
+#prop_vote_button{
+    grid-area: buttons;
+    margin: 20px;
+    justify-self: right;
+    color: white;
+}
+#send_button{
+    grid-area: buttons;
+    justify-self: left;
+    margin-top: 20px; 
 }
