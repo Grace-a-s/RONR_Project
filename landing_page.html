@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="style.css" />
+    <title>Main Page</title>
+  </head>
+  <body>
+    <div>
+      <dialog class="dialog_box" open>
+        <span class="dialog_top_bar"><h2>Create Motion</h2></span>
+        <div class="dialog_box_body">
+          <form action="#">
+            <div class="dialog_box_input">
+              <label for="motion_title">Title</label>
+              <br />
+              <input
+                class="dialog_box_textbox"
+                type="text"
+                id="motion_title"
+                name="motion_title"
+              />
+            </div>
+            <div class="dialog_box_input">
+              <label for="motion_description">Description</label>
+              <br />
+              <input
+                class="dialog_box_large_textbox"
+                type="text"
+                id="motion_description"
+                name="motion_description"
+              />
+            </div>
+
+            <div class="dialog_box_footer">
+              <input class="dialog_box_button" type="submit" value="Submit" />
+            </div>
+          </form>
+        </div>
+      </dialog>
+    </div>
+  </body>
+</html>
