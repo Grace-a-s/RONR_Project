@@ -1,11 +1,16 @@
 
-//main page object, may need
-const Main = {
-
+const Data = {
+    //motion : new Motion("Motion #1", "I propose that we do this thing")//later will pull this from database
+    //most of the data is actually associated with the motion, but I may need this later
+    //I wrote a constructor below but this will eventually actually need to be defined with the landing page where motions are initially created
 }
 const motion = new Motion("Motion #1", "I propose that we do this thing");//later will pull this from a database
-const secondButton = document.getElementById("second");
-secondButton.addEventListener("click", makeSeconded);//running this immedicatly, why?
+
+//if (motion.second === false){//have to check so that stays hidden if page reloaded, but makes stop working for some reason
+    const secondButton = document.getElementById("second");
+    secondButton.addEventListener("click", makeSeconded);
+    console.log('entered if')
+
 
 //motion object constructor function (use case on this page?)
 function Motion(title, content){
