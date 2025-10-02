@@ -2,6 +2,7 @@ html, body{
     background-color: #c7f9cc;
     margin: 0;
     padding: 0;
+    font-family: Inter;
     /*height: 100%; this does not work for some reason, also tried 100vh*/
 }
 .main_body{
@@ -105,6 +106,56 @@ html, body{
     display: flex;
     justify-content: center;
     align-items: center;
+}
+
+.dialog_box {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    border: 1px solid;
+    background-color: #C7F9CC;
+    padding: 0px;
+    width: 600px;
+}
+
+.dialog_top_bar {
+    background-color: #D9D9D9;
+    text-align: center;
+    display: block;
+    width: 100%;
+}
+
+.dialog_box_body {
+    background-color: #C7F9CC;
+    display: block;
+    padding: 16px;
+    gap: 10px;
+}
+
+.dialog_box_input {
+    gap: 10px;
+}
+
+.dialog_box_textbox {
+    border-radius: 4px;
+    border: 5px;
+}
+
+.dialog_box_large_textbox {
+    border-radius: 4px;
+    border: 5px;
+    height: 100px;
+}
+
+.dialog_box_button {
+    background-color: #57CC99;
+    border-radius: 10px;
+}
+
+.dialog_box_footer {
+    align-items: right;
+    padding: 8px;
+    box-sizing: border-box;
 }
 
 /*user_bar elements (prop_vote_button, send_button, and checkbox)*/
