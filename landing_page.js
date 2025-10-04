@@ -18,3 +18,17 @@ form.addEventListener("submit", (event) => {
     data = createData(motion_title, motion_description);
     console.log(data);
 })
+
+const createMotionButton = document.getElementById("create_motion");
+const cancelButton = document.getElementById("cancel");
+const dialog = document.getElementById("create_motion_dialog");
+
+
+createMotionButton.addEventListener("click", () => {
+  dialog.showModal();
+});
+
+cancelButton.addEventListener("click", (event) => {
+    event.preventDefault();
+  dialog.close();
+});
