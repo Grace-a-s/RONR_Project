@@ -61,7 +61,11 @@ function renderMotions() {
     title.textContent = m.title;
     card.appendChild(title);
 
-
+    // Redirect to new motion
+    card.addEventListener("click", () => {
+      window.location.href = `motion_page.html?id=${encodeURIComponent(m.id)}`;
+    });
+    
     motion_card_grid.appendChild(card);
   });
 
