@@ -12,14 +12,17 @@ const Data = {
     },
     voteActive: false
 }
-const motion = new Motion("Motion #1", "I propose that we do this thing");//later will pull this from a database
-
+//const motion = new Motion("Motion #1", "I propose that we do this thing");//later will pull this from a database
+const backButton = document.getElementById('back_button');
 //if (motion.second === false){//have to check so that stays hidden if page reloaded, but makes stop working for some reason
     const secondButton = document.getElementById("second");
     secondButton.addEventListener("click", makeSeconded);
     //console.log('entered if')
 
-
+backButton.addEventListener("click", ()=>{
+    console.log('clicked');
+    window.location.href = 'landing_page.html?id=${encodeURIComponent(m.id)}';
+});
 //motion object constructor function (use case on this page?)
 /*function Motion(title, content){
     id = 1000,
