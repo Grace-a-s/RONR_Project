@@ -4,11 +4,31 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="stylesheet" href="style.css" />
-    <title>Main Page</title>
+    <title>Landing Page</title>
   </head>
   <body>
+    <div class="landing_page">
+      <div class="landing_page_navbar">
+        <span><h2>Robert's Rule of Order</h2></span>
+      </div>
+
+      <div class="landing_page_current_motion_display">
+        <div class="landing_page_motion_card" id="create_motion">
+          <span>New Motion</span>
+        </div>
+      </div>
+
+      <div class="landing_page_motion_history_card_display">
+        <span><h2>Motion History</h2></span>
+
+        <input class="search_bar" type="text" placeholder="Search" />
+
+        <div class="landing_page_motion_card_grid"></div>
+      </div>
+    </div>
+
     <div>
-      <dialog class="dialog_box" open>
+      <dialog class="dialog_box" id="create_motion_dialog">
         <span class="dialog_top_bar"><h2>Create Motion</h2></span>
         <div class="dialog_box_body">
           <form id="create_motion_form" action="#">
@@ -35,6 +55,9 @@
 
             <div class="dialog_box_footer">
               <input class="dialog_box_button" type="submit" value="Submit" />
+              <button class="dialog_box_button" type="button" id="cancel">
+                Cancel
+              </button>
             </div>
           </form>
         </div>
