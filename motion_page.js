@@ -8,17 +8,22 @@ const Data = {
     motion: {
         title: "",
         content: "",
-        debate: []
+        debate: [],
+        second: false
     },
     voteActive: false
 }
-//const motion = new Motion("Motion #1", "I propose that we do this thing");//later will pull this from a database
+const urlParams = new URLSearchParams(window.location.search)
+const id = urlParams.get('id');
+const motionList = localStorage.getItem('motion_list');//later will pull this from a database
+const motion = motionList[id];
+console.log(motion);
 const backButton = document.getElementById('back_button');
 //if (motion.second === false){//have to check so that stays hidden if page reloaded, but makes stop working for some reason
     const secondButton = document.getElementById("second");
     secondButton.addEventListener("click", makeSeconded);
     //console.log('entered if')
-
+//}
 backButton.addEventListener("click", ()=>{
     console.log('clicked');
     window.location.href = 'landing_page.html?id=${encodeURIComponent(m.id)}';
@@ -45,7 +50,8 @@ function createDebateEntry(position, content){
 
 //when second button clicked
 function makeSeconded(motion){
-    motion.second = true;
+    localStorage.setItem('second', 'true')
+    //motion.second = true;
     secondButton.style.display = "none";
     console.log('pressed second button; second value:', motion.second);
     //show debate button
