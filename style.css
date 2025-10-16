@@ -68,7 +68,32 @@ html, body{
     justify-content: space-between;
 }
 
-.text_input{
+/* Container holding the motion and debate boxes stacked vertically */
+.motion_zone{
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* center children horizontally */
+    justify-content: center;
+    grid-area: motion;
+}
+
+#debate_box{
+    background-color: #38A3A5;
+    width: 850px;
+    max-width: calc(100% - 40px);
+    box-sizing: border-box; /*do I need this?*/
+    padding: 10px;
+    min-height: 20px;
+}
+
+.debate_element{
+    background-color: lightgrey;
+    padding: 10px;
+    margin-top: 5px;
+    margin-bottom: 5px;
+}
+
+#text_input{
     background-color: white;
     padding: 10px; 
     margin: 20px;
@@ -87,6 +112,11 @@ html, body{
     border-radius: 15%;
     margin-top: 5px;
 }*/
+
+button:disabled{
+    opacity:1;
+    cursor: not-allowed;
+}
 .button{
     height: 20px;
     background-color: #38A3A5;
