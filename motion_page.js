@@ -12,6 +12,8 @@ const Data = {
   },*/
   voteActive: false,
 };
+
+//get data from Local Storage
 const urlParams = new URLSearchParams(window.location.search);
 console.log(urlParams);
 const id = urlParams.get("id");
@@ -24,16 +26,27 @@ var motion = motionList[id];
 console.log(motion);
 console.log(motion.second);
 
+//set up page, get element from html
 const secondButton = document.getElementById("second");
 secondButton.addEventListener("click", makeSeconded);
-
-preparePage();
 
 const backButton = document.getElementById("back_button");
 backButton.addEventListener("click", () => {
   console.log("clicked");
   window.location.href = "landing_page.html";
 });
+
+const debateButton = document.getElementById("debate_button");
+debateButton.addEventListener("click", openDebate);
+
+preparePage();
+
+const submitButton = document.getElementById("send_button");
+submitButton.addEventListener("click", addDebateEntry);
+const textInput = document.getElementById("text_input");
+
+const debateBox = document.getElementById("debate_box");
+
 //motion object constructor function (use case on this page?)
 /*function Motion(title, content){
     id = 1000,
@@ -47,11 +60,11 @@ backButton.addEventListener("click", () => {
 };
 */
 //object constructor
-function createDebateEntry(position, content) {
-  (this.position = position), //three options (pro, against, neutral)
-    (this.content = content), //string
-    (timeStamp = Date.now()),
-    (this.author = author); //author = get author from data
+function DebateEntry(content) {
+  //(this.position = position), //three options (pro, against, neutral)
+  this.content = content; //string
+  // (timeStamp = Date.now()),
+  // (this.author = author); //author = get author from data
 }
 function preparePage() {
   //second button
@@ -68,11 +81,12 @@ function preparePage() {
 //when second button clicked
 function makeSeconded() {
   motion.second = true;
-  motionList[id] = motion;
+  updateData();
+  /*motionList[id] = motion;
   console.log(motionList);
   console.log(transferData.motion_list);
   transferData.motion_list = motionList;
-  localStorage.setItem("data", JSON.stringify(transferData)); //not passing the right thing
+  localStorage.setItem("data", JSON.stringify(transferData));*/ //not passing the right thing
   secondButton.style.display = "none";
   console.log("pressed second button; second value:", motion.second);
   //show debate button
@@ -80,9 +94,33 @@ function makeSeconded() {
 }
 
 //on up arrow button push, takes string from text box into content variable
-function addDebateEntry(motion, position, content) {
-  motion.debate.push(new DebateEntry(position, content)); //thus prob doesnt work
-}
+function addDebateEntry() {
+  if (motion.second === true) {
+    let debateEntry = new DebateEntry(textInput.value);
+    motion.debate_list.push(debateEntry);
+    console.log(motion.debate_list);
+    updateData();
+    textInput.value = "";
 
+    let debateElement = document.createElement("div");
+    debateElement.textContent = debateEntry.content;
+    debateElement.className = "debate_element";
+    debateBox.appendChild(debateElement);
+  }
+  //else=> show a message saying can't debate until seconded
+}
+function updateData() {
+  motionList[id] = motion;
+  //console.log(motionList);
+  transferData.motion_list = motionList;
+  localStorage.setItem("data", JSON.stringify(transferData));
+}
 //on 'debate' button push, drop down menu shows of debate entries
-function showDebate() {}
+function openDebate() {
+  const debateBox = document.getElementById("debate_box");
+  if (debateBox.style.display === "block") {
+    debateBox.style.display = "none"; // Make the area visible
+  } else {
+    debateBox.style.display = "block";
+  }
+}

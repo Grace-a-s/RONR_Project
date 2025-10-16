@@ -24,7 +24,7 @@
         </div>
     </div>
     <div class="main_body">
-        <!--<div class="motion_zone"> want to be able to have drop down menu or other motions (scrollable in this area when buttons are pressed on this screen)-->
+        <div class="motion_zone">
             <div class="motion_box">
                 <div id="motion_title">
                     Motion
@@ -33,7 +33,7 @@
                     motion contents
                 </div>
                 <div class="bottom_motion">
-                    <button type="button" class="button">
+                    <button type="button" class="button" id="debate_button">
                         debate
                     </button>
                     <button type="button" class="button" id="second">
@@ -41,9 +41,13 @@
                     </button>
                 </div>
             </div>
-        <!--</div>-->
+            <div id="debate_box" style="display:none">
+                
+            </div>
+        </div>
         <div class="user_bar">
-            <input type="text" placeholder="type here" class="text_input"> 
+            <form action=""></form>
+            <input type="text" placeholder="type here" id="text_input"> 
             </input>
             <div class="button" id="send_button">
                 <img src="./images/Arrow up.svg" alt="up arrow">
