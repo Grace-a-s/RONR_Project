@@ -82,13 +82,15 @@ html, body{
     width: 850px;
     max-width: calc(100% - 40px);
     box-sizing: border-box; /*do I need this?*/
-    padding: 5px;
-    min-height: 100px;
+    padding: 10px;
+    min-height: 20px;
 }
 
 .debate_element{
-    background-color: antiquewhite;
-    padding: 5px;
+    background-color: lightgrey;
+    padding: 10px;
+    margin-top: 5px;
+    margin-bottom: 5px;
 }
 
 #text_input{
@@ -110,6 +112,11 @@ html, body{
     border-radius: 15%;
     margin-top: 5px;
 }*/
+
+button:disabled{
+    opacity:1;
+    cursor: not-allowed;
+}
 .button{
     height: 20px;
     background-color: #38A3A5;

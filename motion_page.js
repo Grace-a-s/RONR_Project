@@ -70,6 +70,7 @@ function preparePage() {
   //second button
   if (motion.second === true) {
     secondButton.style.display = "none";
+    debateButton.removeAttribute("disabled");
   }
   //motion contents
   const motionTitle = document.getElementById("motion_title");
@@ -89,6 +90,7 @@ function makeSeconded() {
   localStorage.setItem("data", JSON.stringify(transferData));*/ //not passing the right thing
   secondButton.style.display = "none";
   console.log("pressed second button; second value:", motion.second);
+  debateButton.removeAttribute("disabled");
   //show debate button
   //allow debate/allow text entry?
 }
@@ -119,8 +121,8 @@ function updateData() {
 function openDebate() {
   const debateBox = document.getElementById("debate_box");
   if (debateBox.style.display === "block") {
-    debateBox.style.display = "none"; // Make the area visible
+    debateBox.style.display = "none";
   } else {
-    debateBox.style.display = "block";
+    debateBox.style.display = "block"; //make area visible
   }
 }
