@@ -1,7 +1,10 @@
+//to do list
+//1. add message explaining need to second before can debate
+//2. add message for when no debate entrys added yet
+
 const Data = {
   //motion : new Motion("Motion #1", "I propose that we do this thing")//later will pull this from database
   //most of the data is actually associated with the motion, but I may need this later
-  //I wrote a constructor below but this will eventually actually need to be defined with the landing page where motions are initially created
   voteMode: false,
   amendMode: false,
   /*motion: {
@@ -13,13 +16,11 @@ const Data = {
   voteActive: false,
 };
 
-//get data from Local Storage
+//get data from Local Storage (should this be in data above?)
 const urlParams = new URLSearchParams(window.location.search);
-console.log(urlParams);
 const id = urlParams.get("id");
-console.log(id);
-var transferData = JSON.parse(localStorage.getItem("data"));
-//console.log(transferData); //later will pull this from a database
+//console.log(id);
+var transferData = JSON.parse(localStorage.getItem("data")); //later will pull this from database
 var motionList = transferData.motion_list;
 //console.log(motionList);
 var motion = motionList[id];
@@ -39,26 +40,14 @@ backButton.addEventListener("click", () => {
 const debateButton = document.getElementById("debate_button");
 debateButton.addEventListener("click", openDebate);
 
-preparePage();
-
 const submitButton = document.getElementById("send_button");
-submitButton.addEventListener("click", addDebateEntry);
+submitButton.addEventListener("click", getDebateEntry);
 const textInput = document.getElementById("text_input");
 
 const debateBox = document.getElementById("debate_box");
 
-//motion object constructor function (use case on this page?)
-/*function Motion(title, content){
-    id = 1000,
-    this.title = title,
-    this.content = content,
-    this.timeStamp = Date.now(), //or should it be new Date()?
-    second = false,
-    debate = []; //array of DebateEntry objects (or should this be object of its own)
-    this.author = author
-    voteNumber = [0,0]; 
-};
-*/
+preparePage();
+
 //object constructor
 function DebateEntry(content) {
   //(this.position = position), //three options (pro, against, neutral)
@@ -67,10 +56,11 @@ function DebateEntry(content) {
   // (this.author = author); //author = get author from data
 }
 function preparePage() {
-  //second button
+  //seconded based actions
   if (motion.second === true) {
     secondButton.style.display = "none";
     debateButton.removeAttribute("disabled");
+    motion.debate_list.forEach(addDebateEntry);
   }
   //motion contents
   const motionTitle = document.getElementById("motion_title");
@@ -96,7 +86,7 @@ function makeSeconded() {
 }
 
 //on up arrow button push, takes string from text box into content variable
-function addDebateEntry() {
+function getDebateEntry() {
   if (motion.second === true) {
     let debateEntry = new DebateEntry(textInput.value);
     motion.debate_list.push(debateEntry);
@@ -104,13 +94,22 @@ function addDebateEntry() {
     updateData();
     textInput.value = "";
 
-    let debateElement = document.createElement("div");
+    addDebateEntry(debateEntry);
+    /*let debateElement = document.createElement("div");
     debateElement.textContent = debateEntry.content;
     debateElement.className = "debate_element";
-    debateBox.appendChild(debateElement);
+    debateBox.appendChild(debateElement);*/
   }
   //else=> show a message saying can't debate until seconded
 }
+
+function addDebateEntry(entry) {
+  let debateElement = document.createElement("div");
+  debateElement.textContent = entry.content;
+  debateElement.className = "debate_element";
+  debateBox.appendChild(debateElement);
+}
+
 function updateData() {
   motionList[id] = motion;
   //console.log(motionList);
