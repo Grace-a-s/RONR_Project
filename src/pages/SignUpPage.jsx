@@ -7,11 +7,58 @@ function SignUpPage() {
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
 
+  // Get users from localStorage
+  const getUsers = () => {
+    const storedUsers = localStorage.getItem('users');
+    return storedUsers ? JSON.parse(storedUsers) : {};
+  };
+
+  // Save users to localStorage
+  const saveUsers = (users) => {
+    localStorage.setItem('users', JSON.stringify(users));
+  };
+
+  // Handle signup form submission
+  const handleSignup = (username, email, password) => {
+    const users = getUsers();
+
+    // Check if username already exists
+    if (users[username]) {
+      return { success: false, message: 'Username already exists. Please choose another.' };
+    }
+
+    // Validate inputs
+    if (!username || !email || !password) {
+      return { success: false, message: 'All fields are required.' };
+    }
+
+    if (username.trim() === '' || password.trim() === '') {
+      return { success: false, message: 'Username and password cannot be empty.' };
+    }
+
+    // Add new user to localStorage
+    users[username] = password;
+    saveUsers(users);
+
+    // Store logged-in user in sessionStorage
+    sessionStorage.setItem('currentUser', username);
+
+    return { success: true, message: 'Account created successfully!' };
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    // In a real app, you'd register the user here
-    alert('Sign up successful!');
-    navigate('/signin');
+    
+    // Attempt signup
+    const result = handleSignup(username, email, password);
+    
+    if (result.success) {
+      alert(result.message);
+      navigate('/');
+    } else {
+      alert(result.message);
+      setPassword('');
+    }
   };
 
   return (
