@@ -4,12 +4,12 @@ const Data = {
   //I wrote a constructor below but this will eventually actually need to be defined with the landing page where motions are initially created
   voteMode: false,
   amendMode: false,
-  motion: {
+  /*motion: {
     title: "",
     content: "",
     debate: [],
     second: false,
-  },
+  },*/
   voteActive: false,
 };
 const urlParams = new URLSearchParams(window.location.search);
@@ -17,18 +17,19 @@ console.log(urlParams);
 const id = urlParams.get("id");
 console.log(id);
 var transferData = JSON.parse(localStorage.getItem("data"));
-console.log(transferData); //later will pull this from a database
+//console.log(transferData); //later will pull this from a database
 var motionList = transferData.motion_list;
-console.log(motionList);
+//console.log(motionList);
 var motion = motionList[id];
 console.log(motion);
 console.log(motion.second);
-const backButton = document.getElementById("back_button");
-//if (motion.second === false){//have to check so that stays hidden if page reloaded, but makes stop working for some reason
+
 const secondButton = document.getElementById("second");
 secondButton.addEventListener("click", makeSeconded);
 
-//}
+preparePage();
+
+const backButton = document.getElementById("back_button");
 backButton.addEventListener("click", () => {
   console.log("clicked");
   window.location.href = "landing_page.html";
@@ -53,9 +54,15 @@ function createDebateEntry(position, content) {
     (this.author = author); //author = get author from data
 }
 function preparePage() {
+  //second button
   if (motion.second === true) {
     secondButton.style.display = "none";
   }
+  //motion contents
+  const motionTitle = document.getElementById("motion_title");
+  motionTitle.textContent = motion.title;
+  const motionContents = document.getElementById("motion_contents");
+  motionContents.textContent = motion.description;
 }
 
 //when second button clicked

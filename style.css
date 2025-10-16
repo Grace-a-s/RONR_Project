@@ -58,7 +58,7 @@ html, body{
 }
 
 /*parts of motion box (motion, bottom_motion (buttons), */
-.motion{
+#motion_contents{
     background-color: lightgray;
     padding: 10px;
 }
