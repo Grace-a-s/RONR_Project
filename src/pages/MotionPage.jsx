@@ -51,7 +51,7 @@ function MotionPage() {
   return (
     <>
       <div className="top_bar">
-        <button id="back_button" onClick={() => navigate('/')}>
+        <button id="back_button" onClick={() => navigate('/landing')}>
           <img src="/images/Arrow left.svg" alt="back arrow" />
         </button>
         <div>title</div>

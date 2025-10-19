@@ -49,7 +49,8 @@ function SignInPage() {
     
     if (result.success) {
       alert(result.message);
-      navigate('/');
+      // Navigate to landing page after successful sign-in
+      navigate('/landing');
     } else {
       alert(result.message);
       setPassword('');
