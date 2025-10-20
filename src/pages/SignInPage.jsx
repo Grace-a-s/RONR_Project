@@ -1,37 +1,56 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 function SignInPage() {
-  const [email, setEmail] = useState('');
+  const [user, setUser] = useState('');
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
 
-  const users = {
-    'user@example.com': 'password123',
-    'admin@example.com': 'admin2024',
-    'john.doe@example.com': 'securepwd',
-    'test@example.com': 'test1234'
+  // Initialize localStorage with default user if no users exist
+  useEffect(() => {
+    const storedUsers = localStorage.getItem('users');
+    if (!storedUsers) {
+      // Create default admin account
+      const defaultUsers = {
+        admin: "admin"
+      };
+      localStorage.setItem('users', JSON.stringify(defaultUsers));
+    }
+  }, []);
+
+  // Get users from localStorage
+  const getUsers = () => {
+    const storedUsers = localStorage.getItem('users');
+    return storedUsers ? JSON.parse(storedUsers) : {};
   };
 
-  const handleLogin = (email, password) => {
-    if (users[email]) {
-      if (users[email] === password) {
+  // This function handles login attempts when the user submits the form
+  const handleLogin = (user, password) => {
+    const users = getUsers();
+
+    // Check if username exists in our users object
+    if (users[user]) {
+      // Check if password matches
+      if (users[user] === password) {
+        // Store logged-in user in sessionStorage for the current session
+        sessionStorage.setItem('currentUser', user);
         return { success: true, message: 'Login successful! Welcome!' };
       } else {
         return { success: false, message: 'Incorrect password.' };
       }
     } else {
-      return { success: false, message: 'Email not found.' };
+      return { success: false, message: 'Username not found.' };
     }
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const result = handleLogin(email, password);
+    const result = handleLogin(user, password);
     
     if (result.success) {
       alert(result.message);
-      navigate('/');
+      // Navigate to landing page after successful sign-in
+      navigate('/landing');
     } else {
       alert(result.message);
       setPassword('');
@@ -68,11 +87,11 @@ function SignInPage() {
               color: '#555',
               fontWeight: '500',
               fontSize: '14px'
-            }}>Email Address</label>
+            }}>Username</label>
             <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              type="text"
+              value={user}
+              onChange={(e) => setUser(e.target.value)}
               required
               style={{
                 width: '100%',
