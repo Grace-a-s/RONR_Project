@@ -6,6 +6,7 @@ function MotionPage() {
   const navigate = useNavigate();
   const [motion, setMotion] = useState(null);
   const [showDebate, setShowDebate] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [textInput, setTextInput] = useState('');
 
   useEffect(() => {
@@ -44,6 +45,10 @@ function MotionPage() {
     setShowDebate(!showDebate);
   };
 
+  const handleSignOut = () => {
+    navigate('/signin');
+  };
+
   if (!motion) {
     return <div>Loading...</div>;
   }
@@ -57,7 +62,45 @@ function MotionPage() {
         <div>title</div>
         <div className="right_buttons">
           <div className="circle_button">S</div>
-          <div className="circle_button">P</div>
+          <div style={{ position: 'relative' }}>
+            <div
+              className="circle_button"
+              onClick={() => setShowProfileMenu(!showProfileMenu)}
+              style={{ cursor: 'pointer' }}
+            >
+              P
+            </div>
+            {showProfileMenu && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '50px',
+                  right: '0',
+                  background: '#fff',
+                  border: '1px solid #ccc',
+                  borderRadius: '4px',
+                  padding: '8px',
+                  minWidth: '150px',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                  zIndex: 1000
+                }}
+              >
+                <button
+                  onClick={handleSignOut}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: 'none',
+                    background: 'none',
+                    cursor: 'pointer',
+                    textAlign: 'left'
+                  }}
+                >
+                  Sign Out
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
       <div className="main_body">
