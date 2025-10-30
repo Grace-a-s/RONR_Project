@@ -1,0 +1,10 @@
+{
+    "motion_list" : [{
+   "id": 0,
+   "title":"motion 1",
+   "description":"We should change our budget",
+   "second": false,
+   "timestamp": null,
+   "debate_list" : []
+    }]
+}
