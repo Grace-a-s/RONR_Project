@@ -1,22 +1,36 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
 import MotionPage from './pages/MotionPage';
-import SignInPage from './pages/SignInPage';
-import SignUpPage from './pages/SignUpPage';
+import AuthRedirect from './AuthRedirect';
+import { useAuth0 } from "@auth0/auth0-react";
 
 function App() {
+  const RequireAuth = ({ children }) => {
+    const { isAuthenticated, isLoading } = useAuth0();
+    if (isLoading) return null;
+    if (!isAuthenticated) return null; // guest will be sent to / by the root redirect
+    return children;
+  };
+
+
   return (
-    <Router>
       <Routes>
-        {/* Redirect root to sign-in so the first page shown is SignInPage */}
-        <Route path="/" element={<Navigate to="/signin" replace />} />
-  <Route path="/motion/:id" element={<MotionPage />} />
-  <Route path="/landing" element={<LandingPage />} />
-        <Route path="/signin" element={<SignInPage />} />
-        <Route path="/signup" element={<SignUpPage />} />
+        {/* Redirect to Auth0 hosted login (or to /landing if already signed in) */}
+        <Route path="/" element={<AuthRedirect/>} />
+        <Route path="/signup" element={<AuthRedirect signup />} />
+        <Route path="/motion/:id" element={<MotionPage />} />
+
+
+        <Route 
+          path="/landing"
+          element={
+            <RequireAuth>
+              <LandingPage />
+            </RequireAuth>
+          } 
+        />
       </Routes>
-    </Router>
   );
 }
 
