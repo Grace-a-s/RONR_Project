@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import TopBar from './components/TopBar.jsx';
+import NavBar from './components/NavBar.jsx';
 import { Auth0ProviderWithNavigate } from "./Auth0ProviderWithNavigate.jsx";
 import CommitteePage from './pages/CommitteePage.jsx';
 import MotionPage from './pages/MotionPage.jsx';
@@ -17,7 +17,7 @@ function App() {
 
   return (
       <Router>
-          <TopBar/>
+          <NavBar/>
           <Routes>
             <Route path="/" element={<CommitteePage />}  />
             <Route path="/motion/:id" element={<MotionPage />} />

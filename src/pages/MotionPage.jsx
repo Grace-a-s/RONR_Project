@@ -1,12 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import AppBar from '@mui/material/AppBar';
+import Toolbar from '@mui/material/Toolbar';
+import IconButton from '@mui/material/IconButton';
+import Typography from '@mui/material/Typography';
+import Container from '@mui/material/Container';
+import Box from '@mui/material/Box';
+import Paper from '@mui/material/Paper';
+import Button from '@mui/material/Button';
+import TextField from '@mui/material/TextField';
+import Avatar from '@mui/material/Avatar';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
+import Grid from '@mui/material/Grid';
+import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
+import ListItemText from '@mui/material/ListItemText';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import SendIcon from '@mui/icons-material/Send';
 
 function MotionPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [motion, setMotion] = useState(null);
   const [showDebate, setShowDebate] = useState(false);
-  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [anchorEl, setAnchorEl] = useState(null);
   const [textInput, setTextInput] = useState('');
 
   useEffect(() => {
@@ -19,6 +37,7 @@ function MotionPage() {
         return;
       }
     }
+    // if not found, keep null (shows Loading...)
   }, [id]);
 
   const updateData = (updatedMotion) => {
@@ -28,146 +47,97 @@ function MotionPage() {
       if (idx !== -1) stored[idx] = updatedMotion;
       else stored.push(updatedMotion);
       localStorage.setItem('motions', JSON.stringify(stored));
-   } else {
+    } else {
       const list = stored.motion_list || [];
       const idx = list.findIndex((m) => String(m.id) === String(id));
-     if (idx !== -1) list[idx] = updatedMotion;
-     else list.push(updatedMotion);
+      if (idx !== -1) list[idx] = updatedMotion;
+      else list.push(updatedMotion);
       localStorage.setItem('motions', JSON.stringify({ ...stored, motion_list: list }));
     }
     setMotion(updatedMotion);
   };
 
   const handleSecond = () => {
+    if (!motion) return;
     const updatedMotion = { ...motion, second: true };
     updateData(updatedMotion);
   };
 
   const handleDebateSubmit = () => {
+    if (!motion) return;
     if (motion.second && textInput.trim()) {
       const debateEntry = { content: textInput };
       const updatedMotion = {
         ...motion,
-        debate_list: [...motion.debate_list, debateEntry]
+        debate_list: Array.isArray(motion.debate_list) ? [...motion.debate_list, debateEntry] : [debateEntry]
       };
       updateData(updatedMotion);
       setTextInput('');
     }
   };
 
-  const toggleDebate = () => {
-    setShowDebate(!showDebate);
-  };
+  const toggleDebate = () => setShowDebate((s) => !s);
 
-  if (!motion) {
-    return <div>Loading...</div>;
-  }
+  if (!motion) return <Container sx={{ py: 6 }}><Typography>Loading...</Typography></Container>;
 
   return (
     <>
-      <div className="top_bar">
-        <button id="back_button" onClick={() => navigate('/committee')}>
-          <img src="/images/Arrow left.svg" alt="back arrow" />
-        </button>
-        <div>title</div>
-        <div className="right_buttons">
-          <div className="circle_button">S</div>
-          <div style={{ position: 'relative' }}>
-            <div
-              className="circle_button"
-              onClick={() => setShowProfileMenu(!showProfileMenu)}
-              style={{ cursor: 'pointer' }}
-            >
-              P
-            </div>
-            {showProfileMenu && (
-              <div
-                style={{
-                  position: 'absolute',
-                  top: '50px',
-                  right: '0',
-                  background: '#fff',
-                  border: '1px solid #ccc',
-                  borderRadius: '4px',
-                  padding: '8px',
-                  minWidth: '150px',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                  zIndex: 1000
-                }}
-              >
-                <button
-                  onClick={handleSignOut}
-                  style={{
-                    width: '100%',
-                    padding: '8px',
-                    border: 'none',
-                    background: 'none',
-                    cursor: 'pointer',
-                    textAlign: 'left'
-                  }}
-                >
-                  Sign Out
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-      <div className="main_body">
-        <div className="motion_zone">
-          <div className="motion_box">
-            <div id="motion_title">{motion.title}</div>
-            <div id="motion_contents">{motion.description}</div>
-            <div className="bottom_motion">
-              <button
-                type="button"
-                className="button"
-                id="debate_button"
-                disabled={!motion.second}
-                onClick={toggleDebate}
-              >
-                debate
-              </button>
-              {!motion.second && (
-                <button
-                  type="button"
-                  className="button"
-                  id="second"
-                  onClick={handleSecond}
-                >
-                  second
-                </button>
+      <Container sx={{ py: 4 }}>
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={8}>
+            <Paper variant="outlined" sx={{ p: 3 }}>
+              <Typography variant="h5" gutterBottom>{motion.title}</Typography>
+              <Typography variant="body1" color="text.secondary" sx={{ whiteSpace: 'pre-wrap' }}>{motion.description}</Typography>
+
+              <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
+                <Button variant="contained" onClick={toggleDebate} disabled={!motion.second}>Debate</Button>
+                {!motion.second && (
+                  <Button variant="outlined" onClick={handleSecond}>Second</Button>
+                )}
+              </Box>
+
+              {showDebate && (
+                <Box sx={{ mt: 3 }}>
+                  <Typography variant="subtitle1" gutterBottom>Debate</Typography>
+                  <List sx={{ maxHeight: 240, overflow: 'auto' }}>
+                    {(Array.isArray(motion.debate_list) ? motion.debate_list : []).map((entry, i) => (
+                      <ListItem key={i} divider>
+                        <ListItemText primary={entry.content} />
+                      </ListItem>
+                    ))}
+                  </List>
+                </Box>
               )}
-            </div>
-          </div>
-          <div
-            id="debate_box"
-            style={{ display: showDebate ? 'block' : 'none' }}
-          >
-            {motion.debate_list.map((entry, index) => (
-              <div key={index} className="debate_element">
-                {entry.content}
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="user_bar">
-          <input
-            type="text"
-            placeholder="type here"
-            id="text_input"
-            value={textInput}
-            onChange={(e) => setTextInput(e.target.value)}
-          />
-          <div className="button" id="send_button" onClick={handleDebateSubmit}>
-            <img src="/images/Arrow up.svg" alt="up arrow" />
-          </div>
-          <div className="button" id="prop_vote_button">
-            propose vote
-          </div>
-          <div id="checkbox">checkbox</div>
-        </div>
-      </div>
+            </Paper>
+          </Grid>
+
+          <Grid item xs={12} md={4}>
+            <Paper variant="outlined" sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <TextField
+                placeholder="Type here"
+                value={textInput}
+                onChange={(e) => setTextInput(e.target.value)}
+                multiline
+                minRows={2}
+                fullWidth
+              />
+
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Button
+                  variant="contained"
+                  endIcon={<SendIcon />}
+                  onClick={handleDebateSubmit}
+                  disabled={!motion.second || !textInput.trim()}
+                >
+                  Send
+                </Button>
+                <Button variant="outlined">Propose Vote</Button>
+                <Button variant="outlined">Checkbox</Button>
+              </Box>
+            </Paper>
+          </Grid>
+        </Grid>
+      </Container>
     </>
   );
 }
