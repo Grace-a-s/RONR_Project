@@ -1,18 +1,16 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { Auth0ProviderWithNavigate } from "./Auth0ProviderWithNavigate.jsx";
-import { BrowserRouter } from "react-router-dom";
 import App from './App.jsx'
 import './style.css'
+import { ThemeProvider } from '@emotion/react';
+import theme from './theme.js'
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 
 root.render(
   <React.StrictMode>
-    <BrowserRouter>
-      <Auth0ProviderWithNavigate>
-        <App />
-      </Auth0ProviderWithNavigate>
-    </BrowserRouter>
+    <ThemeProvider theme = {theme}>
+      <App />
+    </ThemeProvider>
   </React.StrictMode>,
 )
