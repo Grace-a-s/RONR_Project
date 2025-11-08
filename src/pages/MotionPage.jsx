@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useAuth0 } from "@auth0/auth0-react";
 
 function MotionPage() {
   const { id } = useParams();
@@ -11,17 +10,31 @@ function MotionPage() {
   const [textInput, setTextInput] = useState('');
 
   useEffect(() => {
-    const transferData = JSON.parse(localStorage.getItem('data'));
-    if (transferData && transferData.motion_list) {
-      const foundMotion = transferData.motion_list[id];
-      setMotion(foundMotion);
+    const stored = JSON.parse(localStorage.getItem('motions'));
+    if (stored) {
+      const list = Array.isArray(stored) ? stored : stored.motion_list || [];
+      const found = list.find((m) => String(m.id) === String(id));
+      if (found) {
+        setMotion(found);
+        return;
+      }
     }
   }, [id]);
 
   const updateData = (updatedMotion) => {
-    const transferData = JSON.parse(localStorage.getItem('data'));
-    transferData.motion_list[id] = updatedMotion;
-    localStorage.setItem('data', JSON.stringify(transferData));
+    const stored = JSON.parse(localStorage.getItem('motions')) || [];
+    if (Array.isArray(stored)) {
+      const idx = stored.findIndex((m) => String(m.id) === String(id));
+      if (idx !== -1) stored[idx] = updatedMotion;
+      else stored.push(updatedMotion);
+      localStorage.setItem('motions', JSON.stringify(stored));
+   } else {
+      const list = stored.motion_list || [];
+      const idx = list.findIndex((m) => String(m.id) === String(id));
+     if (idx !== -1) list[idx] = updatedMotion;
+     else list.push(updatedMotion);
+      localStorage.setItem('motions', JSON.stringify({ ...stored, motion_list: list }));
+    }
     setMotion(updatedMotion);
   };
 
@@ -46,17 +59,6 @@ function MotionPage() {
     setShowDebate(!showDebate);
   };
 
-  const { logout } = useAuth0();
-
-  const handleSignOut = () => {
-    logout({
-      logoutParams: {
-        returnTo: window.location.origin,
-      },
-    });
-    
-  };
-
   if (!motion) {
     return <div>Loading...</div>;
   }
@@ -64,7 +66,7 @@ function MotionPage() {
   return (
     <>
       <div className="top_bar">
-        <button id="back_button" onClick={() => navigate('/landing')}>
+        <button id="back_button" onClick={() => navigate('/committee')}>
           <img src="/images/Arrow left.svg" alt="back arrow" />
         </button>
         <div>title</div>
