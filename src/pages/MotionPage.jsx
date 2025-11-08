@@ -16,6 +16,7 @@ import Grid from '@mui/material/Grid';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import ListItemText from '@mui/material/ListItemText';
+import Divider from '@mui/material/Divider';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SendIcon from '@mui/icons-material/Send';
 
@@ -66,7 +67,8 @@ function MotionPage() {
   const handleDebateSubmit = () => {
     if (!motion) return;
     if (motion.second && textInput.trim()) {
-      const debateEntry = { content: textInput };
+      // include a timestamp for nicer comment UI and potential sorting
+      const debateEntry = { content: textInput, timestamp: Date.now() };
       const updatedMotion = {
         ...motion,
         debate_list: Array.isArray(motion.debate_list) ? [...motion.debate_list, debateEntry] : [debateEntry]
@@ -82,62 +84,76 @@ function MotionPage() {
 
   return (
     <>
-      <Container sx={{ py: 4 }}>
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={8}>
-            <Paper variant="outlined" sx={{ p: 3 }}>
-              <Typography variant="h5" gutterBottom>{motion.title}</Typography>
-              <Typography variant="body1" color="text.secondary" sx={{ whiteSpace: 'pre-wrap' }}>{motion.description}</Typography>
-
-              <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
-                <Button variant="contained" onClick={toggleDebate} disabled={!motion.second}>Debate</Button>
-                {!motion.second && (
-                  <Button variant="outlined" onClick={handleSecond}>Second</Button>
-                )}
+      <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+        <Container sx={{ py: 4, flex: '1 1 auto' }}>
+          <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+            <Paper variant="outlined" sx={{ bgcolor: '#57CC99', p: 3, maxWidth: 900, width: '100%' }}>
+              <Typography variant="h5" align="center">{motion.title}</Typography>
+              <Box sx={{ bgcolor: 'white', borderRadius: 1, mt: 2, p: 2 }}>
+                <Typography variant="body1" align="center" color="text.secondary" sx={{ whiteSpace: 'pre-wrap' }}>{motion.description}</Typography>
               </Box>
 
-              {showDebate && (
-                <Box sx={{ mt: 3 }}>
-                  <Typography variant="subtitle1" gutterBottom>Debate</Typography>
-                  <List sx={{ maxHeight: 240, overflow: 'auto' }}>
-                    {(Array.isArray(motion.debate_list) ? motion.debate_list : []).map((entry, i) => (
-                      <ListItem key={i} divider>
-                        <ListItemText primary={entry.content} />
-                      </ListItem>
-                    ))}
-                  </List>
-                </Box>
-              )}
-            </Paper>
-          </Grid>
-
-          <Grid item xs={12} md={4}>
-            <Paper variant="outlined" sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <TextField
-                placeholder="Type here"
-                value={textInput}
-                onChange={(e) => setTextInput(e.target.value)}
-                multiline
-                minRows={2}
-                fullWidth
-              />
-
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <Button
-                  variant="contained"
-                  endIcon={<SendIcon />}
-                  onClick={handleDebateSubmit}
-                  disabled={!motion.second || !textInput.trim()}
-                >
-                  Send
+              <Box sx={{ mt: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Button variant="outlined" onClick={handleSecond} disabled={!!motion.second}>
+                  {motion.second ? 'Seconded' : 'Second'}
                 </Button>
-                <Button variant="outlined">Propose Vote</Button>
-                <Button variant="outlined">Checkbox</Button>
+
+                <Button variant="contained" onClick={toggleDebate} disabled={!motion.second}>
+                  View Debate
+                </Button>
               </Box>
             </Paper>
-          </Grid>
-        </Grid>
-      </Container>
+          </Box>
+
+          {showDebate && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+              <Paper elevation={1} sx={{ p: 2, maxWidth: 900, width: '100%' }}>
+                <Typography variant="subtitle1" gutterBottom>Debate</Typography>
+
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: { xs: '240px', md: '360px' }, overflow: 'auto', pr: 1, pb: { xs: '140px', md: '100px' } }}>
+                  {(Array.isArray(motion.debate_list) ? motion.debate_list : []).map((entry, i) => (
+                    <Paper key={i} variant="outlined" sx={{ p: 2, display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+                      <Avatar sx={{ bgcolor: (theme) => theme.palette.primary.main, width: 40, height: 40, flexShrink: 0 }}>
+                        {entry.author ? String(entry.author)[0].toUpperCase() : 'M'}
+                      </Avatar>
+
+                      <Box sx={{ flex: 1 }}>
+                        <Typography variant="caption" color="text.secondary">
+                          {entry.author || 'Member'} · {entry.timestamp ? new Date(entry.timestamp).toLocaleString() : `#${i + 1}`}
+                        </Typography>
+
+                        <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', mt: 1 }}>
+                          {entry.content}
+                        </Typography>
+                      </Box>
+                    </Paper>
+                  ))}
+                </Box>
+              </Paper>
+            </Box>
+          )}
+        </Container>
+
+        <Box component="footer" sx={{bottom: 16, left: { xs: 16, md: 24 }, right: { xs: 16, md: 24 }, zIndex: (theme) => theme.zIndex.drawer + 1 }}>
+          <Paper variant="outlined" sx={{ p: 2, display: 'flex', flexDirection: 'column', maxWidth: 'calc(100% - 48px)', margin: '0 auto' }}>
+            <TextField
+              placeholder="Type here"
+              value={textInput}
+              onChange={(e) => setTextInput(e.target.value)}
+              multiline
+              minRows={2}
+              fullWidth
+            />
+
+            <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+              <Button variant="contained" endIcon={<SendIcon />} onClick={handleDebateSubmit} disabled={!motion.second || !textInput.trim()}>
+                Send
+              </Button>
+              <Button variant="outlined">Propose Vote</Button>
+            </Box>
+          </Paper>
+        </Box>
+      </Box>
     </>
   );
 }
