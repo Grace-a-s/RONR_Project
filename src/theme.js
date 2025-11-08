@@ -10,6 +10,18 @@ const theme = createTheme({
   typography: {
     fontFamily: 'Inter, Arial, sans-serif',
   },
+  components: {
+    MuiCssBaseline: {
+      styleOverrides: {
+        'html, body': {
+          backgroundColor: '#c7f9cc',
+          margin: 0,
+          padding: 0,
+          fontFamily: 'Inter, Arial, sans-serif',
+        },
+      },
+    },
+  },
 });
 
 export default theme;
