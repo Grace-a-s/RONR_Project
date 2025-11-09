@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 
+import {data} from "C:/Users/gs101/Documents/ronr_project/netlify/functions/motionAPI.js";
+console.log(data); 
+
+
 function MotionPage() {
   const { id } = useParams();
   const navigate = useNavigate();
