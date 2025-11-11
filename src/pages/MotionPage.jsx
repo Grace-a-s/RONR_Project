@@ -1,6 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 
+import {data} from "C:/Users/gs101/Documents/ronr_project/netlify/functions/motionAPI.js";
+console.log(data); 
+
+/*async function getUserData(userId) {
+  try {
+    const user = await client.getUserInfo(userId);
+    console.log(user);
+  } catch (error) {
+    console.error('Oops!', error);
+  }
+}*/
+
 function MotionPage() {
   const { id } = useParams();
   const navigate = useNavigate();
