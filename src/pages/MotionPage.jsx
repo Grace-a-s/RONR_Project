@@ -1,18 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 
-import {data} from "C:/Users/gs101/Documents/ronr_project/netlify/functions/motionAPI.js";
-console.log(data); 
-
-/*async function getUserData(userId) {
-  try {
-    const user = await client.getUserInfo(userId);
-    console.log(user);
-  } catch (error) {
-    console.error('Oops!', error);
-  }
-}*/
-
 function MotionPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -20,35 +8,68 @@ function MotionPage() {
   const [showDebate, setShowDebate] = useState(false);
   const [textInput, setTextInput] = useState('');
 
+  // Fetch motion data from API on mount
   useEffect(() => {
-    const transferData = JSON.parse(localStorage.getItem('data'));
-    if (transferData && transferData.motion_list) {
-      const foundMotion = transferData.motion_list[id];
-      setMotion(foundMotion);
+    const fetchMotion = async () => {
+      try {
+        const response = await fetch(`/.netlify/functions/motionAPI/${id}`);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const foundMotion = await response.json();
+        setMotion(foundMotion);
+      } catch (error) {
+        console.error('Failed to fetch motion:', error);
+        // Could redirect to landing page or show error
+      }
+    };
+    
+    if (id) {
+      fetchMotion();
     }
   }, [id]);
 
-  const updateData = (updatedMotion) => {
-    const transferData = JSON.parse(localStorage.getItem('data'));
-    transferData.motion_list[id] = updatedMotion;
-    localStorage.setItem('data', JSON.stringify(transferData));
-    setMotion(updatedMotion);
+  // Update motion via API
+  const updateMotion = async (updatedFields) => {
+    try {
+      const response = await fetch(`/.netlify/functions/motionAPI/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updatedFields)
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const updatedMotion = await response.json();
+      setMotion(updatedMotion);
+      return updatedMotion;
+    } catch (error) {
+      console.error('Failed to update motion:', error);
+      alert('Failed to update motion. Please try again.');
+      return null;
+    }
   };
 
-  const handleSecond = () => {
-    const updatedMotion = { ...motion, second: true };
-    updateData(updatedMotion);
+  const handleSecond = async () => {
+    await updateMotion({ second: true });
   };
 
-  const handleDebateSubmit = () => {
+  const handleDebateSubmit = async () => {
     if (motion.second && textInput.trim()) {
-      const debateEntry = { content: textInput };
-      const updatedMotion = {
-        ...motion,
-        debate_list: [...motion.debate_list, debateEntry]
+      const debateEntry = { 
+        content: textInput,
+        author: sessionStorage.getItem('currentUser') || 'Anonymous',
+        timestamp: Date.now()
       };
-      updateData(updatedMotion);
-      setTextInput('');
+      const updatedDebateList = [...motion.debate_list, debateEntry];
+      const result = await updateMotion({ debate_list: updatedDebateList });
+      if (result) {
+        setTextInput('');
+      }
     }
   };
 

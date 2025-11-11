@@ -1,10 +1,38 @@
 {
-    "motion_list" : [{
-   "id": 0,
-   "title":"motion 1",
-   "description":"We should change our budget",
-   "second": false,
-   "timestamp": null,
-   "debate_list" : []
-    }]
+  "motion_list": [
+    {
+      "id": 0,
+      "title": "motion 1",
+      "description": "We should change our budget",
+      "second": true,
+      "timestamp": null,
+      "debate_list": [
+        {
+          "content": "i disagree",
+          "author": "admin",
+          "timestamp": 1762849062052
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "title": "motion 2",
+      "description": "something important",
+      "debate_list": [
+        {
+          "content": "i like this",
+          "author": "admin",
+          "timestamp": 1762848610069
+        },
+        {
+          "content": "another thing",
+          "author": "admin",
+          "timestamp": 1762849039497
+        }
+      ],
+      "timestamp": 1762848573412,
+      "author": "admin",
+      "second": true
+    }
+  ]
 }

@@ -8,20 +8,26 @@ function LandingPage() {
   const [motionDescription, setMotionDescription] = useState('A quick description of the motion');
   const navigate = useNavigate();
 
+  // Fetch motions from API on mount
   useEffect(() => {
-    const saved = localStorage.getItem('data');
-    if (saved) {
+    const fetchMotions = async () => {
       try {
-        const parsed = JSON.parse(saved);
-        if (parsed && Array.isArray(parsed.motion_list)) {
-          setData(parsed);
-        } else if (Array.isArray(parsed)) {
-          setData({ motion_list: parsed });
+        const response = await fetch('/.netlify/functions/motionAPI');
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
-      } catch (e) {
-        console.warn('Failed to parse saved data', e);
+        const result = await response.json();
+        if (result && Array.isArray(result.motion_list)) {
+          setData(result);
+        }
+      } catch (error) {
+        console.error('Failed to fetch motions:', error);
+        // Fallback to empty list on error
+        setData({ motion_list: [] });
       }
-    }
+    };
+    
+    fetchMotions();
   }, []);
 
   const createMotion = (id, title, description, timestamp, author) => {
@@ -36,25 +42,44 @@ function LandingPage() {
     };
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     
-    const id = data.motion_list.length
-      ? Math.max(...data.motion_list.map((m) => m.id)) + 1
-      : 0;
-    
-    const timestamp = Date.now();
-    const author = 'Author';
-    
-    const newMotion = createMotion(id, motionTitle, motionDescription, timestamp, author);
-    const updatedData = {
-      ...data,
-      motion_list: [...data.motion_list, newMotion]
-    };
-    
-    setData(updatedData);
-    localStorage.setItem('data', JSON.stringify(updatedData));
-    setShowDialog(false);
+    try {
+      const response = await fetch('/.netlify/functions/motionAPI', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: motionTitle,
+          description: motionDescription,
+          author: sessionStorage.getItem('currentUser') || 'Anonymous'
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const newMotion = await response.json();
+      
+      // Update local state with new motion
+      const updatedData = {
+        ...data,
+        motion_list: [...data.motion_list, newMotion]
+      };
+      
+      setData(updatedData);
+      setShowDialog(false);
+      
+      // Reset form
+      setMotionTitle('Sample motion');
+      setMotionDescription('A quick description of the motion');
+    } catch (error) {
+      console.error('Failed to create motion:', error);
+      alert('Failed to create motion. Please try again.');
+    }
   };
 
   const handleMotionClick = (motionId) => {
