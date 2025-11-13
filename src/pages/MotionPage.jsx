@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useAuth0 } from "@auth0/auth0-react";
 
 function MotionPage() {
   const { id } = useParams();
@@ -45,8 +46,15 @@ function MotionPage() {
     setShowDebate(!showDebate);
   };
 
+  const { logout } = useAuth0();
+
   const handleSignOut = () => {
-    navigate('/signin');
+    logout({
+      logoutParams: {
+        returnTo: window.location.origin,
+      },
+    });
+    
   };
 
   if (!motion) {
