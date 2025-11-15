@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef, useId } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import Container from '@mui/material/Container';
 import Box from '@mui/material/Box';
 import Card from "@mui/material/Card";
@@ -10,36 +10,38 @@ import MotionDetailsCard from '../components/MotionDetailsCard';
 
 function CommitteePage() {
   const navigate = useNavigate();
+  const { committeeId } = useParams();
   const [openDialog, setOpenDialog] = useState(false);
   const [motionTitle, setMotionTitle] = useState('');
   const [motionDescription, setMotionDescription] = useState('');
   const [motions, setMotions] = useState([]);
   const initialPersistSkip = useRef(true);
-  const id = useId();
+  // key for per-committee motions in localStorage
+  const storageKey = committeeId ? `motions_${committeeId}` : 'motions';
 
 
-  // load saved motions from localStorage on mount
+  // load saved motions for this committee from localStorage on mount
   useEffect(() => {
     try {
-      const saved = localStorage.getItem('motions');
+      const saved = localStorage.getItem(storageKey);
       if (saved) setMotions(JSON.parse(saved));
     } catch (e) {
       console.warn('Failed to parse saved motions', e);
     }
-  }, []);
+  }, [storageKey]);
 
-  // persist motions
+  // persist motions for this committee
   useEffect(() => {
     if (initialPersistSkip.current) {
       initialPersistSkip.current = false;
       return;
     }
     try {
-      localStorage.setItem('motions', JSON.stringify(motions));
+      localStorage.setItem(storageKey, JSON.stringify(motions));
     } catch (e) {
       console.warn('Failed to save motions', e);
     }
-  }, [motions]);
+  }, [motions, storageKey]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -47,7 +49,7 @@ function CommitteePage() {
       const timestamp = Date.now();
 
       const newMotion = {
-        id: id,
+        id: String(Date.now()) + Math.floor(Math.random() * 1000),
         title: motionTitle,
         description: motionDescription,
         debate_list: [],
@@ -55,7 +57,7 @@ function CommitteePage() {
         author: "fakeauthor",
         second: false,
       };
-      setMotions([...motions, newMotion]);
+      setMotions((prev) => [...prev, newMotion]);
       setOpenDialog(false);
       setMotionTitle('');
       setMotionDescription('');
@@ -65,7 +67,8 @@ function CommitteePage() {
   const handleOpenCreate = () => setOpenDialog(true);
 
   const handleCardClick = (motion) => {
-    navigate(`/motion/${encodeURIComponent(motion.id)}`);
+    // navigate to motion within this committee
+    navigate(`/committee/${encodeURIComponent(committeeId)}/motion/${encodeURIComponent(motion.id)}`);
   };
 
   return (

@@ -6,6 +6,7 @@ import CommitteePage from './pages/CommitteePage.jsx';
 import MotionPage from './pages/MotionPage.jsx';
 import AuthRedirect from './AuthRedirect';
 import { useAuth0 } from "@auth0/auth0-react";
+import LandingPage from './pages/LandingPage.jsx';
 
 function App() {
   const RequireAuth = ({ children }) => {
@@ -15,40 +16,43 @@ function App() {
     return children;
   };
 
-  // return (
-  //     <Router>
-  //         <NavBar/>
-  //         <Routes>
-  //           <Route path="/" element={<CommitteePage />}  />
-  //           <Route path="/motion/:id" element={<MotionPage />} />
-  //           <Route 
-  //             path="/committee"
-  //             element={<CommitteePage />} 
-  //           />
-  //         </Routes>
-  //     </Router>
-  // );
   return (
       <Router>
-        <Auth0ProviderWithNavigate>
           <NavBar/>
           <Routes>
-            {/* Redirect to Auth0 hosted login (or to /committee if already signed in) */}
-            <Route path="/" element={<AuthRedirect/>} />
-            {/* <Route path="/signup" element={<AuthRedirect signup />} /> */}
-            <Route path="/motion/:id" element={<MotionPage />} />
+            <Route path="/" element={<LandingPage/>} />
+            <Route path="/committee/:committeeId/motion/:motionId" element={<MotionPage />} />
+            <Route path="/committee/:committeeId" element={<CommitteePage />} />
             <Route 
-              path="/committee"
+              path="/home"
               element={
-                <RequireAuth>
-                  <CommitteePage />
-                </RequireAuth>
+                  <LandingPage />
               } 
             />
           </Routes>
-        </Auth0ProviderWithNavigate>
       </Router>
   );
+  // return (
+  //     <Router>
+  //       <Auth0ProviderWithNavigate>
+  //         <NavBar/>
+  //         <Routes>
+  //           {/* Redirect to Auth0 hosted login (or to /committee if already signed in) */}
+  //           <Route path="/" element={<AuthRedirect/>} />
+  //           <Route path="/motion/:id" element={<MotionPage />} />
+  //           <Route path="/committee/:id" element={<CommitteePage />} />
+  //           <Route 
+  //             path="/home"
+  //             element={
+  //               <RequireAuth>
+  //                 <LandingPage />
+  //               </RequireAuth>
+  //             } 
+  //           />
+  //         </Routes>
+  //       </Auth0ProviderWithNavigate>
+  //     </Router>
+  // );
 }
 
 export default App;
