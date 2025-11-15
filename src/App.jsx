@@ -6,6 +6,7 @@ import CommitteePage from './pages/CommitteePage.jsx';
 import MotionPage from './pages/MotionPage.jsx';
 import AuthRedirect from './AuthRedirect';
 import { useAuth0 } from "@auth0/auth0-react";
+import UserProfilePage from './pages/UserProfilePage.jsx';
 import LandingPage from './pages/LandingPage.jsx';
 
 function App() {
@@ -23,6 +24,7 @@ function App() {
             <Route path="/" element={<LandingPage/>} />
             <Route path="/committee/:committeeId/motion/:motionId" element={<MotionPage />} />
             <Route path="/committee/:committeeId" element={<CommitteePage />} />
+            <Route path="/user-profile" element={<UserProfilePage/>} />
             <Route 
               path="/home"
               element={
