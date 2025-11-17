@@ -3,12 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import Container from '@mui/material/Container';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
-import CreateCommitteeCard from '../components/CreateCommitteeCard';
 import CreateCommitteeDialog from '../components/CreateCommitteeDialog';
 import CommitteeCard from '../components/CommitteeCard';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import Grid from '@mui/material/Grid';
+import AddIcon from '@mui/icons-material/Add';
+import { useAuth0 } from '@auth0/auth0-react';
+
 
 function LandingPage() {
   const navigate = useNavigate();
@@ -55,6 +57,8 @@ function LandingPage() {
     setOpen(false);
   };
 
+  const { user, isAuthenticated, isLoading } = useAuth0();
+
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
 
@@ -64,25 +68,28 @@ function LandingPage() {
   };
 
   return (
-    <Container maxWidth="xl" sx={{ mt: 4 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">Committees</Typography>
-      </Box>
+    <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 10, gap: 2 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
+          <Typography variant="h2" component="h1" sx={{ lineHeight: 1, fontWeight: 400 }}>Welcome back, {user?.name || 'User'}!</Typography>
+          <Typography variant="h6" component="h2" sx={{ mt: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            You have [#] motions across [#] committees
+          </Typography>
+        </Box>
 
-      <Box sx={{ mb: 3, p: 2, bgcolor: '#f7f7f7', borderRadius: 1 }}>
-        <Typography variant="body1">Create or select a committee to view motions and manage members.</Typography>
-      </Box>
-
-      <Box sx={{ mb: 2 }}>
-        <CreateCommitteeCard onOpen={handleOpen} />
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Button onClick={handleOpen} startIcon={<AddIcon />} sx={{ bgcolor: '#0ba179ff', color: 'common.white', p: 1.5, borderRadius: '10px' }}>
+            Create Committee
+          </Button>
+        </Box>
       </Box>
 
       <Box>
-        <Typography variant="h6" sx={{ mb: 2 }}>Your Committees</Typography>
+        <Typography variant="h4" component="h2" sx={{ mb: 2 }}>Your Committees</Typography>
 
         {committees.length === 0 ? (
           <Card sx={{ p: 4, textAlign: 'center' }}>
-            <Typography>No committees yet. Create one to get started.</Typography>
+            <Typography>No committees yet! Create one to get started.</Typography>
           </Card>
         ) : (
           <Grid container spacing={3}>
