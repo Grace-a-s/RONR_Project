@@ -32,7 +32,7 @@ function CommitteeCard({ committee = {}, onClick }) {
     >
       <CardActionArea onClick={onClick} sx={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
         {/* Header */}
-        <Box sx={{ bgcolor: 'primary.main', color: 'common.white', p: 2 }}>
+        <Box sx={{ bgcolor: 'secondary.main', color: 'common.white', p: 2 }}>
           <Typography variant="h6" sx={{ fontWeight: 600 }}>{committee.name}</Typography>
         </Box>
 
