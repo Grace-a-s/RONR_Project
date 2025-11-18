@@ -43,7 +43,7 @@ function NavBar() {
     
     return (
         <>
-            <AppBar position="static" sx={{ backgroundColor: '#38A3A5', color: '#fff' }} elevation={0}>
+            <AppBar position="static" sx={{ backgroundColor: 'primary.main', color: '#fff' }} elevation={0}>
                 <Toolbar>
                     <Tooltip title="Home">
                         <IconButton edge="start" color="inherit" onClick={() => navigate('/')} aria-label="home">
