@@ -18,32 +18,20 @@ function CreateMotionDialog({
 }) {
   return (
     <Dialog
-        open={open}
-        onClose={onClose}
-        PaperProps={{
-          sx: {
-            width: 600,
-            maxWidth: '90%',
-            backgroundColor: '#C7F9CC',
-            border: '1px solid black',
-          }}}
+      open={open}
+      onClose={onClose}
+      fullWidth
+      maxWidth="sm"
+      PaperProps={{ sx: { bgcolor: 'background.default', borderRadius: 2, overflowX: 'hidden' } }}
     >
-      <DialogTitle
-        sx={{
-          backgroundColor: '#D9D9D9',
-          textAlign: 'center',
-          padding: '16px',
-        }}
-      >
-        <Typography variant="h5" component="div">
-          Create Motion
-        </Typography>
+      <DialogTitle sx={{ textAlign: 'center', py: 2 }}>
+        <Typography variant="h5" sx={{ fontWeight: 600 }}>Create Motion</Typography>
       </DialogTitle>
 
-      <DialogContent sx={{ backgroundColor: '#C7F9CC', padding: '16px' }}>
-        <Box component="form" onSubmit={onSubmit} sx={{ mt: 2 }}>
+      <DialogContent sx={{ px: 3, pt: 0, overflowX: 'hidden' }}>
+        <Box component="form" id="create-motion-form" onSubmit={onSubmit} sx={{ mt: 1 }}>
           <Box sx={{ mb: 2 }}>
-            <Typography component="label" htmlFor="motion_title" sx={{ mb: 1 }}>
+            <Typography component="label" htmlFor="motion_title" sx={{ display: 'block', mb: 1, fontSize: 13, fontWeight: 600 }}>
               Title
             </Typography>
             <TextField
@@ -51,17 +39,18 @@ function CreateMotionDialog({
               id="motion_title"
               value={motionTitle}
               onChange={(e) => setMotionTitle(e.target.value)}
+              placeholder="Short, descriptive title"
+              variant="outlined"
+              size="small"
+              autoFocus
               sx={{
-                backgroundColor: 'white',
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '4px',
-                },
+                backgroundColor: 'white'
               }}
             />
           </Box>
 
-          <Box sx={{ mb: 2 }}>
-            <Typography component="label" htmlFor="motion_description" sx={{ mb: 1 }}>
+          <Box sx={{ mb: 1, width: '100%', boxSizing: 'border-box' }}>
+            <Typography component="label" htmlFor="motion_description" sx={{ display: 'block', mb: 1, fontSize: 13, fontWeight: 600 }}>
               Description
             </Typography>
             <TextField
@@ -71,54 +60,20 @@ function CreateMotionDialog({
               rows={4}
               value={motionDescription}
               onChange={(e) => setMotionDescription(e.target.value)}
+              placeholder='Explain the motion in a few sentences (e.g., "I move that...")'
+              variant="outlined"
+              size="small"
               sx={{
-                backgroundColor: 'white',
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '4px',
-                },
+                backgroundColor: 'white'
               }}
             />
           </Box>
         </Box>
       </DialogContent>
 
-      <DialogActions
-        sx={{
-          backgroundColor: '#C7F9CC',
-          padding: '8px 16px',
-          justifyContent: 'flex-end',
-        }}
-      >
-        <Button
-          onClick={onSubmit}
-          sx={{
-            backgroundColor: '#57CC99',
-            borderRadius: '10px',
-            width: 70,
-            height: 30,
-            color: 'black',
-            '&:hover': {
-              backgroundColor: '#4ab885',
-            },
-          }}
-        >
-          Submit
-        </Button>
-        <Button
-          onClick={onClose}
-          sx={{
-            backgroundColor: '#57CC99',
-            borderRadius: '10px',
-            width: 70,
-            height: 30,
-            color: 'black',
-            '&:hover': {
-              backgroundColor: '#4ab885',
-            },
-          }}
-        >
-          Cancel
-        </Button>
+      <DialogActions sx={{ justifyContent: 'flex-end', px: 3, pb: 2 }}>
+        <Button onClick={onClose} variant="outlined" color="inherit">Cancel</Button>
+        <Button type="submit" form="create-motion-form" variant="contained" color="secondary">Create</Button>
       </DialogActions>
     </Dialog>
   );

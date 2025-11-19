@@ -19,6 +19,7 @@ import ListItemText from '@mui/material/ListItemText';
 import Divider from '@mui/material/Divider';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SendIcon from '@mui/icons-material/Send';
+import sampleData from '../test_committee_data.json';
 
 function MotionPage() {
   const { committeeId, motionId } = useParams();
@@ -30,14 +31,40 @@ function MotionPage() {
 
   useEffect(() => {
     const key = committeeId ? `motions_${committeeId}` : 'motions';
-    const stored = JSON.parse(localStorage.getItem(key));
-    if (stored) {
+    const storedRaw = localStorage.getItem(key);
+    if (storedRaw) {
+      const stored = JSON.parse(storedRaw);
       const list = Array.isArray(stored) ? stored : stored.motion_list || [];
       const found = list.find((m) => String(m.id) === String(motionId));
       if (found) {
         setMotion(found);
         return;
       }
+    }
+
+    // fallback to sample data (read-only). Map sample motion to app shape.
+    try {
+      if (Array.isArray(sampleData)) {
+        const commit = sampleData.find((c) => String(c.id) === String(committeeId));
+        if (commit && Array.isArray(commit.motionList)) {
+          const found = commit.motionList.find((m) => String(m.id) === String(motionId));
+          if (found) {
+            const mapped = {
+              id: String(found.id),
+              title: found.name || found.title || '',
+              description: found.description || '',
+              debate_list: [],
+              timestamp: Date.now(),
+              author: found.author || '',
+              second: found.status === 'SECOND' || found.status === 'SECONDING',
+            };
+            setMotion(mapped);
+            return;
+          }
+        }
+      }
+    } catch (e) {
+      // ignore
     }
     // if not found, keep null (shows Loading...)
   }, [committeeId, motionId]);
