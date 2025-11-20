@@ -46,6 +46,7 @@ exports.handler = async function (event) {
       if (!name) {
         return {
           statusCode: 400,
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ error: "Name required" }),
         };
       }
@@ -60,12 +61,21 @@ exports.handler = async function (event) {
       await writeCommittees(committees);
       return {
         statusCode: 201,
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ committee: newCommittee }),
       };
     } catch (e) {
-      return { statusCode: 500, body: JSON.stringify({ error: String(e) }) };
+      return {
+        statusCode: 500,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ error: String(e) }),
+      };
     }
   }
 
-  return { statusCode: 405, body: "Method Not Allowed" };
+  return {
+    statusCode: 405,
+    headers: { "Content-Type": "application/json" },
+    body: "Method Not Allowed",
+  };
 };
