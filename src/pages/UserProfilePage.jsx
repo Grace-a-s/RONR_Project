@@ -10,7 +10,7 @@ import EditIcon from '@mui/icons-material/Edit';
 
 
 function UserProfilePage() {
-    const user = {name: 'Comfy', email: 'email'};
+    const user = {name: 'Comfy', email: 'email'}; // TODO: Replace with Auth0 stuff
     return (
         <Box sx={{ p: 3 }}>
             <Paper sx={{ p: 3 }} elevation={1}>

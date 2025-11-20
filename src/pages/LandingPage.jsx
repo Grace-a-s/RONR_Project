@@ -10,6 +10,7 @@ import Button from '@mui/material/Button';
 import Grid from '@mui/material/Grid';
 import AddIcon from '@mui/icons-material/Add';
 import { useAuth0 } from '@auth0/auth0-react';
+import sampleData from '../test_committee_data.json';
 
 
 function LandingPage() {
@@ -23,7 +24,18 @@ function LandingPage() {
   useEffect(() => {
     try {
       const raw = localStorage.getItem('committees');
-      if (raw) setCommittees(JSON.parse(raw));
+      if (raw) {
+        setCommittees(JSON.parse(raw));
+      } else if (Array.isArray(sampleData)) {
+        const mapped = sampleData.map((c) => ({
+          id: String(c.id),
+          name: c.name || `Committee ${c.id}`,
+          description: c.description || c.description || '',
+          createdAt: Date.now(),
+          members: c.memberList || [],
+        }));
+        setCommittees(mapped);
+      }
     } catch (e) {
       console.warn('Failed to load committees', e);
     }

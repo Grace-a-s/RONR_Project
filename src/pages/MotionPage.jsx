@@ -19,11 +19,16 @@ import ListItemText from '@mui/material/ListItemText';
 import Divider from '@mui/material/Divider';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SendIcon from '@mui/icons-material/Send';
+import { useAuth0 } from "@auth0/auth0-react";
 import sampleData from '../test_committee_data.json';
 
 function MotionPage() {
   const { committeeId, motionId } = useParams();
   const navigate = useNavigate();
+
+  // TODO: Implement role-based views of motion page
+  const { user } = useAuth0();
+
   const [motion, setMotion] = useState(null);
   const [showDebate, setShowDebate] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
@@ -56,7 +61,7 @@ function MotionPage() {
               debate_list: [],
               timestamp: Date.now(),
               author: found.author || '',
-              second: found.status === 'SECOND' || found.status === 'SECONDING',
+              status: found.status,
             };
             setMotion(mapped);
             return;

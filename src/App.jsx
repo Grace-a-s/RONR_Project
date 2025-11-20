@@ -20,20 +20,22 @@ function App() {
 
   return (
       <Router>
+        <Auth0ProviderWithNavigate>
           <NavBar/>
           <Routes>
-            <Route path="/" element={<LandingPage/>} />
-            <Route path="/committee/:committeeId/motion/:motionId" element={<MotionPage />} />
-            <Route path="/committee/:committeeId" element={<CommitteePage />} />
-            <Route path="/user-profile" element={<UserProfilePage/>} />
-            <Route path="/committee/:committeeId/membership" element={<CommitteeMembershipPage />} />
+            <Route path="/" element={<AuthRedirect/>} />
             <Route 
-              path="/home"
+              path="/home" 
               element={
                   <LandingPage />
               } 
             />
+            <Route path="/committee/:committeeId/motion/:motionId" element={<MotionPage />} />
+            <Route path="/committee/:committeeId" element={<CommitteePage />} />
+            <Route path="/user-profile" element={<UserProfilePage/>} />
+            <Route path="/committee/:committeeId/membership" element={<CommitteeMembershipPage />} />
           </Routes>
+        </Auth0ProviderWithNavigate>
       </Router>
   );
   // return (

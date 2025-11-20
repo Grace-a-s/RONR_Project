@@ -123,7 +123,7 @@ function CommitteePage() {
       {/* Breadcrumb */}
       <Box sx={{ mb: 2 }}>
         <Box
-          onClick={() => navigate('/')}
+          onClick={() => navigate('/home')}
           sx={{ display: 'inline-flex', alignItems: 'center', gap: 1, cursor: 'pointer', color: 'text.primary' }}
           aria-label="Back to main page"
         >
@@ -155,7 +155,7 @@ function CommitteePage() {
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
               <Button
                 variant="contained"
-                onClick={() => navigate(`/committee/${encodeURIComponent(committeeId)}/members`)}
+                onClick={() => navigate(`/committee/${encodeURIComponent(committeeId)}/membership`)}
                 sx={{
                   backgroundColor: 'common.white',
                   color: (theme) => theme.palette.primary.main,
