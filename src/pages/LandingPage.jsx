@@ -19,11 +19,15 @@ function LandingPage() {
 
   useEffect(() => {
     let mounted = true;
-    import('../lib/api').then(({ fetchJson }) => {
-      fetchJson('/.netlify/functions/committees')
-        .then((data) => {
+    import('../lib/api').then(({ fetchJson }) => {        
+      fetchJson('/.netlify/functions/committees', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        }).then((data) => {
+          console.log("Data", data);
+          console.log("Committes list", data.committees);
           if (!mounted) return;
-          if (data && Array.isArray(data.committees)) setCommittees(data.committees);
+          if (data ) setCommittees(data.committees);
         })
         .catch((e) => console.warn('Failed to load committees from API', e));
     });
@@ -40,6 +44,7 @@ function LandingPage() {
       description: description.trim(),
       createdAt: Date.now(),
     };
+    console.log('Creating committee (client):', newCommittee);
     import('../lib/api').then(({ fetchJson }) => {
       fetchJson('/.netlify/functions/committees', {
         method: 'POST',
@@ -47,6 +52,7 @@ function LandingPage() {
         body: JSON.stringify({ name: newCommittee.name, description: newCommittee.description }),
       })
         .then((data) => {
+          console.log('Create committee response:', data);
           if (data && data.committee) setCommittees((c) => [...c, data.committee]);
         })
         .catch((e) => console.warn('Failed to create committee', e));
@@ -54,7 +60,10 @@ function LandingPage() {
     setName('');
     setDescription('');
     setOpen(false);
+    console.log("Current committees", committees);
   };
+
+  
 
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);

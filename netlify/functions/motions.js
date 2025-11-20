@@ -43,11 +43,20 @@ exports.handler = async function (event) {
       if (!found)
         return {
           statusCode: 404,
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ error: "Not found" }),
         };
-      return { statusCode: 200, body: JSON.stringify({ motion: found }) };
+      return {
+        statusCode: 200,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ motion: found }),
+      };
     }
-    return { statusCode: 200, body: JSON.stringify({ motion_list: motions }) };
+    return {
+      statusCode: 200,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ motion_list: motions }),
+    };
   }
 
   if (httpMethod === "POST") {
@@ -67,9 +76,17 @@ exports.handler = async function (event) {
       };
       motions.push(newMotion);
       await writeMotions(cid, motions);
-      return { statusCode: 201, body: JSON.stringify({ motion: newMotion }) };
+      return {
+        statusCode: 201,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ motion: newMotion }),
+      };
     } catch (e) {
-      return { statusCode: 500, body: JSON.stringify({ error: String(e) }) };
+      return {
+        statusCode: 500,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ error: String(e) }),
+      };
     }
   }
 
@@ -80,6 +97,7 @@ exports.handler = async function (event) {
       if (!motion || !motion.id)
         return {
           statusCode: 400,
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ error: "Motion and id required" }),
         };
       const cid = bodyCid || committeeId;
@@ -88,11 +106,23 @@ exports.handler = async function (event) {
       if (idx !== -1) motions[idx] = motion;
       else motions.push(motion);
       await writeMotions(cid, motions);
-      return { statusCode: 200, body: JSON.stringify({ motion }) };
+      return {
+        statusCode: 200,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ motion }),
+      };
     } catch (e) {
-      return { statusCode: 500, body: JSON.stringify({ error: String(e) }) };
+      return {
+        statusCode: 500,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ error: String(e) }),
+      };
     }
   }
 
-  return { statusCode: 405, body: "Method Not Allowed" };
+  return {
+    statusCode: 405,
+    headers: { "Content-Type": "application/json" },
+    body: "Method Not Allowed",
+  };
 };

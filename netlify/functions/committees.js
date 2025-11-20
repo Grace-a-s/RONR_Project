@@ -34,6 +34,7 @@ exports.handler = async function (event) {
     const committees = await readCommittees();
     return {
       statusCode: 200,
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ committees }),
     };
   }
