@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Container from '@mui/material/Container';
 import Box from '@mui/material/Box';
@@ -19,15 +19,14 @@ function LandingPage() {
 
   useEffect(() => {
     let mounted = true;
-    fetch('/.netlify/functions/committees')
-      .then((r) => r.json())
-      .then((data) => {
-        if (!mounted) return;
-        if (data && Array.isArray(data.committees)) setCommittees(data.committees);
-      })
-      .catch((e) => {
-        console.warn('Failed to load committees from API', e);
-      });
+    import('../lib/api').then(({ fetchJson }) => {
+      fetchJson('/.netlify/functions/committees')
+        .then((data) => {
+          if (!mounted) return;
+          if (data && Array.isArray(data.committees)) setCommittees(data.committees);
+        })
+        .catch((e) => console.warn('Failed to load committees from API', e));
+    });
     return () => { mounted = false };
   }, []);
 
@@ -41,16 +40,17 @@ function LandingPage() {
       description: description.trim(),
       createdAt: Date.now(),
     };
-    fetch('/.netlify/functions/committees', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: newCommittee.name, description: newCommittee.description }),
-    })
-      .then((r) => r.json())
-      .then((data) => {
-        if (data && data.committee) setCommittees((c) => [...c, data.committee]);
+    import('../lib/api').then(({ fetchJson }) => {
+      fetchJson('/.netlify/functions/committees', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newCommittee.name, description: newCommittee.description }),
       })
-      .catch((e) => console.warn('Failed to create committee', e));
+        .then((data) => {
+          if (data && data.committee) setCommittees((c) => [...c, data.committee]);
+        })
+        .catch((e) => console.warn('Failed to create committee', e));
+    });
     setName('');
     setDescription('');
     setOpen(false);

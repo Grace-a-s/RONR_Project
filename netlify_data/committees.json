@@ -22,5 +22,11 @@
     "name": "another one",
     "description": "yep",
     "createdAt": 1763604194864
+  },
+  {
+    "id": "1763605848816",
+    "name": "api-test-1763605848810",
+    "description": "created by script",
+    "createdAt": 1763605848816
   }
 ]

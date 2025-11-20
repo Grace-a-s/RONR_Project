@@ -31,37 +31,35 @@ function MotionPage() {
   useEffect(() => {
     // Load motion via API (no localStorage fallback)
     let mounted = true;
-    fetch(`/.netlify/functions/motions?committeeId=${encodeURIComponent(committeeId || '')}&motionId=${encodeURIComponent(motionId || '')}`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (!mounted) return;
-        if (data && data.motion) {
-          setMotion(data.motion);
-          return;
-        }
-        if (data && Array.isArray(data.motion_list)) {
-          const found = data.motion_list.find((m) => String(m.id) === String(motionId));
-          if (found) setMotion(found);
-        }
-      })
-      .catch((e) => {
-        console.warn('Failed to load motion from API', e);
-      });
+    import('../lib/api').then(({ fetchJson }) => {
+      fetchJson(`/.netlify/functions/motions?committeeId=${encodeURIComponent(committeeId || '')}&motionId=${encodeURIComponent(motionId || '')}`)
+        .then((data) => {
+          if (!mounted) return;
+          if (data && data.motion) {
+            setMotion(data.motion);
+            return;
+          }
+          if (data && Array.isArray(data.motion_list)) {
+            const found = data.motion_list.find((m) => String(m.id) === String(motionId));
+            if (found) setMotion(found);
+          }
+        })
+        .catch((e) => console.warn('Failed to load motion from API', e));
+    });
     return () => { mounted = false };
   }, [committeeId, motionId]);
 
   const updateData = (updatedMotion) => {
     // Update via API (no localStorage fallback). Optimistically update UI on success.
-    fetch('/.netlify/functions/motions', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ committeeId, motion: updatedMotion }),
-    })
-      .then((r) => r.json())
-      .then(() => setMotion(updatedMotion))
-      .catch((e) => {
-        console.warn('Failed to update motion via API', e);
-      });
+    import('../lib/api').then(({ fetchJson }) => {
+      fetchJson('/.netlify/functions/motions', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ committeeId, motion: updatedMotion }),
+      })
+        .then(() => setMotion(updatedMotion))
+        .catch((e) => console.warn('Failed to update motion via API', e));
+    });
   };
 
   const handleSecond = () => {

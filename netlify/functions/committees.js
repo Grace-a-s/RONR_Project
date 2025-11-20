@@ -7,7 +7,9 @@ const FILE = path.join(DATA_DIR, "committees.json");
 async function ensureDataDir() {
   try {
     await fs.mkdir(DATA_DIR, { recursive: true });
-  } catch (e) {}
+  } catch (e) {
+    console.log("ensureDataDir");
+  }
 }
 
 async function readCommittees() {
@@ -15,6 +17,7 @@ async function readCommittees() {
     const raw = await fs.readFile(FILE, "utf8");
     return JSON.parse(raw || "[]");
   } catch (e) {
+    console.log("readCommittees");
     return [];
   }
 }

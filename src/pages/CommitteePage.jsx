@@ -23,18 +23,17 @@ function CommitteePage() {
   // load motions for this committee from API on mount
   useEffect(() => {
     let mounted = true;
-    fetch(`/.netlify/functions/motions?committeeId=${encodeURIComponent(committeeId || '')}`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (!mounted) return;
-        if (data) {
-          const list = Array.isArray(data.motion_list) ? data.motion_list : data;
-          setMotions(list || []);
-        }
-      })
-      .catch((e) => {
-        console.warn('Failed to load motions from API', e);
-      });
+    import('../lib/api').then(({ fetchJson }) => {
+      fetchJson(`/.netlify/functions/motions?committeeId=${encodeURIComponent(committeeId || '')}`)
+        .then((data) => {
+          if (!mounted) return;
+          if (data) {
+            const list = Array.isArray(data.motion_list) ? data.motion_list : data;
+            setMotions(list || []);
+          }
+        })
+        .catch((e) => console.warn('Failed to load motions from API', e));
+    });
     return () => { mounted = false };
   }, [storageKey]);
 
@@ -54,16 +53,17 @@ function CommitteePage() {
         author: "fakeauthor",
         second: false,
       };
-      fetch('/.netlify/functions/motions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ committeeId, title: newMotion.title, description: newMotion.description, author: newMotion.author }),
-      })
-        .then((r) => r.json())
-        .then((data) => {
-          if (data && data.motion) setMotions((prev) => [...prev, data.motion]);
+      import('../lib/api').then(({ fetchJson }) => {
+        fetchJson('/.netlify/functions/motions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ committeeId, title: newMotion.title, description: newMotion.description, author: newMotion.author }),
         })
-        .catch((e) => console.warn('Failed to create motion', e));
+          .then((data) => {
+            if (data && data.motion) setMotions((prev) => [...prev, data.motion]);
+          })
+          .catch((e) => console.warn('Failed to create motion', e));
+      });
       setOpenDialog(false);
       setMotionTitle('');
       setMotionDescription('');
