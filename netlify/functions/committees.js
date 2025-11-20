@@ -43,6 +43,7 @@ exports.handler = async function (event) {
     try {
       const body = JSON.parse(event.body || "{}");
       const { name, description } = body;
+      console.log("body", body);
       if (!name) {
         return {
           statusCode: 400,
@@ -51,6 +52,7 @@ exports.handler = async function (event) {
         };
       }
       const committees = await readCommittees();
+      console.log("committees", committees);
       const newCommittee = {
         id: String(Date.now()),
         name: String(name).trim(),
