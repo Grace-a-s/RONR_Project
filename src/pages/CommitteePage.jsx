@@ -33,31 +33,21 @@ function CommitteePage() {
   const [committee, setCommittee] = useState(null);
 
 
-  // load saved motions for this committee from localStorage on mount
+  // load motions for this committee from API on mount
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(storageKey);
-      if (saved) {
-        setMotions(JSON.parse(saved));
-      } else if (Array.isArray(sampleData)) {
-        // find committee in sample data and map motions to app shape
-        const found = sampleData.find((c) => String(c.id) === String(committeeId));
-        if (found && Array.isArray(found.motionList)) {
-          const mapped = found.motionList.map((m) => ({
-            id: String(m.id),
-            title: m.name || m.title || '',
-            description: m.description || '',
-            debate_list: [],
-            timestamp: Date.now(),
-            author: m.author || '',
-            second: m.status === 'SECOND' || m.status === 'SECONDING',
-          }));
-          setMotions(mapped);
-        }
-      }
-    } catch (e) {
-      console.warn('Failed to parse saved motions', e);
-    }
+    let mounted = true;
+    import('../lib/api').then(({ fetchJson }) => {
+      fetchJson(`/.netlify/functions/motions?committeeId=${encodeURIComponent(committeeId || '')}`)
+        .then((data) => {
+          if (!mounted) return;
+          if (data) {
+            const list = Array.isArray(data.motion_list) ? data.motion_list : data;
+            setMotions(list || []);
+          }
+        })
+        .catch((e) => console.warn('Failed to load motions from API', e));
+    });
+    return () => { mounted = false };
   }, [storageKey]);
 
   // load committee metadata (name, description, members) from stored committees
@@ -73,18 +63,7 @@ function CommitteePage() {
     }
   }, [committeeId]);
 
-  // persist motions for this committee
-  useEffect(() => {
-    if (initialPersistSkip.current) {
-      initialPersistSkip.current = false;
-      return;
-    }
-    try {
-      localStorage.setItem(storageKey, JSON.stringify(motions));
-    } catch (e) {
-      console.warn('Failed to save motions', e);
-    }
-  }, [motions, storageKey]);
+  // No local persistence; rely on API for storage.
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -100,7 +79,17 @@ function CommitteePage() {
         author: "fakeauthor",
         second: false,
       };
-      setMotions((prev) => [...prev, newMotion]);
+      import('../lib/api').then(({ fetchJson }) => {
+        fetchJson('/.netlify/functions/motions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ committeeId, title: newMotion.title, description: newMotion.description, author: newMotion.author }),
+        })
+          .then((data) => {
+            if (data && data.motion) setMotions((prev) => [...prev, data.motion]);
+          })
+          .catch((e) => console.warn('Failed to create motion', e));
+      });
       setOpenDialog(false);
       setMotionTitle('');
       setMotionDescription('');
