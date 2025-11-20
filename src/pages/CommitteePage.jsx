@@ -22,12 +22,26 @@ function CommitteePage() {
 
   // load saved motions for this committee from localStorage on mount
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(storageKey);
-      if (saved) setMotions(JSON.parse(saved));
-    } catch (e) {
-      console.warn('Failed to parse saved motions', e);
-    }
+    let mounted = true;
+    fetch(`/.netlify/functions/motions?committeeId=${encodeURIComponent(committeeId || '')}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (!mounted) return;
+        if (data) {
+          // server returns { motion_list: [...] }
+          const list = Array.isArray(data.motion_list) ? data.motion_list : data;
+          setMotions(list || []);
+        }
+      })
+      .catch(() => {
+        try {
+          const saved = localStorage.getItem(storageKey);
+          if (saved) setMotions(JSON.parse(saved));
+        } catch (e) {
+          console.warn('Failed to parse saved motions', e);
+        }
+      });
+    return () => { mounted = false };
   }, [storageKey]);
 
   // persist motions for this committee
@@ -36,11 +50,15 @@ function CommitteePage() {
       initialPersistSkip.current = false;
       return;
     }
-    try {
-      localStorage.setItem(storageKey, JSON.stringify(motions));
-    } catch (e) {
-      console.warn('Failed to save motions', e);
-    }
+    // Try to PUT updates to server when motions change. Keep localStorage fallback for offline.
+    (async () => {
+      try {
+        // We won't send every change; creation uses POST below. Persist to localStorage as a backup.
+        localStorage.setItem(storageKey, JSON.stringify(motions));
+      } catch (e) {
+        console.warn('Failed to save motions', e);
+      }
+    })();
   }, [motions, storageKey]);
 
   const handleSubmit = (e) => {
@@ -57,7 +75,18 @@ function CommitteePage() {
         author: "fakeauthor",
         second: false,
       };
-      setMotions((prev) => [...prev, newMotion]);
+      // Post to API, fall back to local state
+      fetch('/.netlify/functions/motions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ committeeId, title: newMotion.title, description: newMotion.description, author: newMotion.author }),
+      })
+        .then((r) => r.json())
+        .then((data) => {
+          if (data && data.motion) setMotions((prev) => [...prev, data.motion]);
+          else setMotions((prev) => [...prev, newMotion]);
+        })
+        .catch(() => setMotions((prev) => [...prev, newMotion]));
       setOpenDialog(false);
       setMotionTitle('');
       setMotionDescription('');

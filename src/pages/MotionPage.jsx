@@ -29,35 +29,79 @@ function MotionPage() {
   const [textInput, setTextInput] = useState('');
 
   useEffect(() => {
-    const key = committeeId ? `motions_${committeeId}` : 'motions';
-    const stored = JSON.parse(localStorage.getItem(key));
-    if (stored) {
-      const list = Array.isArray(stored) ? stored : stored.motion_list || [];
-      const found = list.find((m) => String(m.id) === String(motionId));
-      if (found) {
-        setMotion(found);
-        return;
-      }
-    }
-    // if not found, keep null (shows Loading...)
+    // Try API first, fall back to localStorage
+    let mounted = true;
+    fetch(`/.netlify/functions/motions?committeeId=${encodeURIComponent(committeeId || '')}&motionId=${encodeURIComponent(motionId || '')}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (!mounted) return;
+        if (data && data.motion) {
+          setMotion(data.motion);
+          return;
+        }
+        // data.motion_list for list response
+        if (data && Array.isArray(data.motion_list)) {
+          const found = data.motion_list.find((m) => String(m.id) === String(motionId));
+          if (found) {
+            setMotion(found);
+            return;
+          }
+        }
+        // fallback to localStorage
+        try {
+          const key = committeeId ? `motions_${committeeId}` : 'motions';
+          const stored = JSON.parse(localStorage.getItem(key));
+          if (stored) {
+            const list = Array.isArray(stored) ? stored : stored.motion_list || [];
+            const found = list.find((m) => String(m.id) === String(motionId));
+            if (found) setMotion(found);
+          }
+        } catch (e) {
+          // ignore
+        }
+      })
+      .catch(() => {
+        try {
+          const key = committeeId ? `motions_${committeeId}` : 'motions';
+          const stored = JSON.parse(localStorage.getItem(key));
+          if (stored) {
+            const list = Array.isArray(stored) ? stored : stored.motion_list || [];
+            const found = list.find((m) => String(m.id) === String(motionId));
+            if (found) setMotion(found);
+          }
+        } catch (e) {}
+      });
+    return () => { mounted = false };
   }, [committeeId, motionId]);
 
   const updateData = (updatedMotion) => {
-    const key = committeeId ? `motions_${committeeId}` : 'motions';
-    const stored = JSON.parse(localStorage.getItem(key)) || [];
-    if (Array.isArray(stored)) {
-      const idx = stored.findIndex((m) => String(m.id) === String(motionId));
-      if (idx !== -1) stored[idx] = updatedMotion;
-      else stored.push(updatedMotion);
-      localStorage.setItem(key, JSON.stringify(stored));
-    } else {
-      const list = stored.motion_list || [];
-      const idx = list.findIndex((m) => String(m.id) === String(motionId));
-      if (idx !== -1) list[idx] = updatedMotion;
-      else list.push(updatedMotion);
-      localStorage.setItem(key, JSON.stringify({ ...stored, motion_list: list }));
-    }
-    setMotion(updatedMotion);
+    // Update via API, fall back to localStorage
+    fetch('/.netlify/functions/motions', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ committeeId, motion: updatedMotion }),
+    })
+      .then((r) => r.json())
+      .then(() => setMotion(updatedMotion))
+      .catch(() => {
+        const key = committeeId ? `motions_${committeeId}` : 'motions';
+        try {
+          const stored = JSON.parse(localStorage.getItem(key)) || [];
+          if (Array.isArray(stored)) {
+            const idx = stored.findIndex((m) => String(m.id) === String(motionId));
+            if (idx !== -1) stored[idx] = updatedMotion;
+            else stored.push(updatedMotion);
+            localStorage.setItem(key, JSON.stringify(stored));
+          } else {
+            const list = stored.motion_list || [];
+            const idx = list.findIndex((m) => String(m.id) === String(motionId));
+            if (idx !== -1) list[idx] = updatedMotion;
+            else list.push(updatedMotion);
+            localStorage.setItem(key, JSON.stringify({ ...stored, motion_list: list }));
+          }
+        } catch (e) {}
+        setMotion(updatedMotion);
+      });
   };
 
   const handleSecond = () => {

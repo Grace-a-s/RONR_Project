@@ -19,12 +19,23 @@ function LandingPage() {
   const skipPersist = useRef(true);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem('committees');
-      if (raw) setCommittees(JSON.parse(raw));
-    } catch (e) {
-      console.warn('Failed to load committees', e);
-    }
+    // Try API first, fall back to localStorage
+    let mounted = true;
+    fetch('/.netlify/functions/committees')
+      .then((r) => r.json())
+      .then((data) => {
+        if (!mounted) return;
+        if (data && Array.isArray(data.committees)) setCommittees(data.committees);
+      })
+      .catch(() => {
+        try {
+          const raw = localStorage.getItem('committees');
+          if (raw) setCommittees(JSON.parse(raw));
+        } catch (e) {
+          console.warn('Failed to load committees', e);
+        }
+      });
+    return () => { mounted = false };
   }, []);
 
   useEffect(() => {
@@ -32,11 +43,16 @@ function LandingPage() {
       skipPersist.current = false;
       return;
     }
-    try {
-      localStorage.setItem('committees', JSON.stringify(committees));
-    } catch (e) {
-      console.warn('Failed to save committees', e);
-    }
+    // Persist to API; if API fails, fall back to localStorage
+    (async () => {
+      try {
+        // Here we simply replace client-side persistence with server call on create only.
+        // Keep localStorage fallback for offline/dev.
+        localStorage.setItem('committees', JSON.stringify(committees));
+      } catch (e) {
+        console.warn('Failed to save committees', e);
+      }
+    })();
   }, [committees]);
 
   const handleCreate = (e) => {
@@ -49,7 +65,18 @@ function LandingPage() {
       description: description.trim(),
       createdAt: Date.now(),
     };
-    setCommittees((c) => [...c, newCommittee]);
+    // Try to create on server, fall back locally
+    fetch('/.netlify/functions/committees', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: newCommittee.name, description: newCommittee.description }),
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data && data.committee) setCommittees((c) => [...c, data.committee]);
+        else setCommittees((c) => [...c, newCommittee]);
+      })
+      .catch(() => setCommittees((c) => [...c, newCommittee]));
     setName('');
     setDescription('');
     setOpen(false);
