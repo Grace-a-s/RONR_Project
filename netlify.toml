@@ -1,0 +1,18 @@
+[build]
+  command   = "npm run build"
+  publish   = "dist"
+  functions = "netlify/functions"
+
+# SPA fallback — serve index.html for all unknown routes (client-side routing)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+  force = true
+
+[dev]
+  # When you run `netlify dev`, proxy requests to the Vite dev server
+  # and use the functions directory below.
+  command = "npm run dev"
+  port = 5174
+  functions = "netlify/functions"
