@@ -16,10 +16,8 @@ function LandingPage() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [committees, setCommittees] = useState([]);
-  const skipPersist = useRef(true);
 
   useEffect(() => {
-    // Try API first, fall back to localStorage
     let mounted = true;
     fetch('/.netlify/functions/committees')
       .then((r) => r.json())
@@ -27,33 +25,11 @@ function LandingPage() {
         if (!mounted) return;
         if (data && Array.isArray(data.committees)) setCommittees(data.committees);
       })
-      .catch(() => {
-        try {
-          const raw = localStorage.getItem('committees');
-          if (raw) setCommittees(JSON.parse(raw));
-        } catch (e) {
-          console.warn('Failed to load committees', e);
-        }
+      .catch((e) => {
+        console.warn('Failed to load committees from API', e);
       });
     return () => { mounted = false };
   }, []);
-
-  useEffect(() => {
-    if (skipPersist.current) {
-      skipPersist.current = false;
-      return;
-    }
-    // Persist to API; if API fails, fall back to localStorage
-    (async () => {
-      try {
-        // Here we simply replace client-side persistence with server call on create only.
-        // Keep localStorage fallback for offline/dev.
-        localStorage.setItem('committees', JSON.stringify(committees));
-      } catch (e) {
-        console.warn('Failed to save committees', e);
-      }
-    })();
-  }, [committees]);
 
   const handleCreate = (e) => {
     e.preventDefault();
@@ -65,7 +41,6 @@ function LandingPage() {
       description: description.trim(),
       createdAt: Date.now(),
     };
-    // Try to create on server, fall back locally
     fetch('/.netlify/functions/committees', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -74,9 +49,8 @@ function LandingPage() {
       .then((r) => r.json())
       .then((data) => {
         if (data && data.committee) setCommittees((c) => [...c, data.committee]);
-        else setCommittees((c) => [...c, newCommittee]);
       })
-      .catch(() => setCommittees((c) => [...c, newCommittee]));
+      .catch((e) => console.warn('Failed to create committee', e));
     setName('');
     setDescription('');
     setOpen(false);

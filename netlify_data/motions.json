@@ -1,1 +1,11 @@
-[]
+[
+  {
+    "id": "1763603848988433",
+    "title": "Test Motion",
+    "description": "from api_test",
+    "debate_list": [],
+    "timestamp": 1763603848988,
+    "author": "tester",
+    "second": false
+  }
+]

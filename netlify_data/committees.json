@@ -10,5 +10,17 @@
     "name": "performance",
     "description": "yearly play related debate",
     "createdAt": 1763599969739
+  },
+  {
+    "id": "1763603848964",
+    "name": "api-test-1763603848955",
+    "description": "created by script",
+    "createdAt": 1763603848964
+  },
+  {
+    "id": "1763604194864",
+    "name": "another one",
+    "description": "yep",
+    "createdAt": 1763604194864
   }
 ]

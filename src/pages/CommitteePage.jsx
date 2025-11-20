@@ -20,7 +20,7 @@ function CommitteePage() {
   const storageKey = committeeId ? `motions_${committeeId}` : 'motions';
 
 
-  // load saved motions for this committee from localStorage on mount
+  // load motions for this committee from API on mount
   useEffect(() => {
     let mounted = true;
     fetch(`/.netlify/functions/motions?committeeId=${encodeURIComponent(committeeId || '')}`)
@@ -28,38 +28,17 @@ function CommitteePage() {
       .then((data) => {
         if (!mounted) return;
         if (data) {
-          // server returns { motion_list: [...] }
           const list = Array.isArray(data.motion_list) ? data.motion_list : data;
           setMotions(list || []);
         }
       })
-      .catch(() => {
-        try {
-          const saved = localStorage.getItem(storageKey);
-          if (saved) setMotions(JSON.parse(saved));
-        } catch (e) {
-          console.warn('Failed to parse saved motions', e);
-        }
+      .catch((e) => {
+        console.warn('Failed to load motions from API', e);
       });
     return () => { mounted = false };
   }, [storageKey]);
 
-  // persist motions for this committee
-  useEffect(() => {
-    if (initialPersistSkip.current) {
-      initialPersistSkip.current = false;
-      return;
-    }
-    // Try to PUT updates to server when motions change. Keep localStorage fallback for offline.
-    (async () => {
-      try {
-        // We won't send every change; creation uses POST below. Persist to localStorage as a backup.
-        localStorage.setItem(storageKey, JSON.stringify(motions));
-      } catch (e) {
-        console.warn('Failed to save motions', e);
-      }
-    })();
-  }, [motions, storageKey]);
+  // No local persistence; rely on API for storage.
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -75,7 +54,6 @@ function CommitteePage() {
         author: "fakeauthor",
         second: false,
       };
-      // Post to API, fall back to local state
       fetch('/.netlify/functions/motions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -84,9 +62,8 @@ function CommitteePage() {
         .then((r) => r.json())
         .then((data) => {
           if (data && data.motion) setMotions((prev) => [...prev, data.motion]);
-          else setMotions((prev) => [...prev, newMotion]);
         })
-        .catch(() => setMotions((prev) => [...prev, newMotion]));
+        .catch((e) => console.warn('Failed to create motion', e));
       setOpenDialog(false);
       setMotionTitle('');
       setMotionDescription('');

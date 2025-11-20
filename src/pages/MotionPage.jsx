@@ -29,7 +29,7 @@ function MotionPage() {
   const [textInput, setTextInput] = useState('');
 
   useEffect(() => {
-    // Try API first, fall back to localStorage
+    // Load motion via API (no localStorage fallback)
     let mounted = true;
     fetch(`/.netlify/functions/motions?committeeId=${encodeURIComponent(committeeId || '')}&motionId=${encodeURIComponent(motionId || '')}`)
       .then((r) => r.json())
@@ -39,43 +39,19 @@ function MotionPage() {
           setMotion(data.motion);
           return;
         }
-        // data.motion_list for list response
         if (data && Array.isArray(data.motion_list)) {
           const found = data.motion_list.find((m) => String(m.id) === String(motionId));
-          if (found) {
-            setMotion(found);
-            return;
-          }
-        }
-        // fallback to localStorage
-        try {
-          const key = committeeId ? `motions_${committeeId}` : 'motions';
-          const stored = JSON.parse(localStorage.getItem(key));
-          if (stored) {
-            const list = Array.isArray(stored) ? stored : stored.motion_list || [];
-            const found = list.find((m) => String(m.id) === String(motionId));
-            if (found) setMotion(found);
-          }
-        } catch (e) {
-          // ignore
+          if (found) setMotion(found);
         }
       })
-      .catch(() => {
-        try {
-          const key = committeeId ? `motions_${committeeId}` : 'motions';
-          const stored = JSON.parse(localStorage.getItem(key));
-          if (stored) {
-            const list = Array.isArray(stored) ? stored : stored.motion_list || [];
-            const found = list.find((m) => String(m.id) === String(motionId));
-            if (found) setMotion(found);
-          }
-        } catch (e) {}
+      .catch((e) => {
+        console.warn('Failed to load motion from API', e);
       });
     return () => { mounted = false };
   }, [committeeId, motionId]);
 
   const updateData = (updatedMotion) => {
-    // Update via API, fall back to localStorage
+    // Update via API (no localStorage fallback). Optimistically update UI on success.
     fetch('/.netlify/functions/motions', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -83,24 +59,8 @@ function MotionPage() {
     })
       .then((r) => r.json())
       .then(() => setMotion(updatedMotion))
-      .catch(() => {
-        const key = committeeId ? `motions_${committeeId}` : 'motions';
-        try {
-          const stored = JSON.parse(localStorage.getItem(key)) || [];
-          if (Array.isArray(stored)) {
-            const idx = stored.findIndex((m) => String(m.id) === String(motionId));
-            if (idx !== -1) stored[idx] = updatedMotion;
-            else stored.push(updatedMotion);
-            localStorage.setItem(key, JSON.stringify(stored));
-          } else {
-            const list = stored.motion_list || [];
-            const idx = list.findIndex((m) => String(m.id) === String(motionId));
-            if (idx !== -1) list[idx] = updatedMotion;
-            else list.push(updatedMotion);
-            localStorage.setItem(key, JSON.stringify({ ...stored, motion_list: list }));
-          }
-        } catch (e) {}
-        setMotion(updatedMotion);
+      .catch((e) => {
+        console.warn('Failed to update motion via API', e);
       });
   };
 
