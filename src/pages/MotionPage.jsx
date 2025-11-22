@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import AppBar from '@mui/material/AppBar';
 import Toolbar from '@mui/material/Toolbar';
@@ -26,7 +26,7 @@ function MotionPage() {
   const { committeeId, motionId } = useParams();
   const navigate = useNavigate();
 
-  // TODO: Implement role-based views of motion page
+   // TODO: Implement role-based views of motion page
   const { user } = useAuth0();
 
   const [motion, setMotion] = useState(null);
@@ -35,37 +35,61 @@ function MotionPage() {
   const [textInput, setTextInput] = useState('');
 
   useEffect(() => {
-    // Load motion via API (no localStorage fallback)
-    let mounted = true;
-    import('../lib/api').then(({ fetchJson }) => {
-      fetchJson(`/.netlify/functions/motions?committeeId=${encodeURIComponent(committeeId || '')}&motionId=${encodeURIComponent(motionId || '')}`)
-        .then((data) => {
-          if (!mounted) return;
-          if (data && data.motion) {
-            setMotion(data.motion);
+    const key = committeeId ? `motions_${committeeId}` : 'motions';
+    const storedRaw = localStorage.getItem(key);
+    if (storedRaw) {
+      const stored = JSON.parse(storedRaw);
+      const list = Array.isArray(stored) ? stored : stored.motion_list || [];
+      const found = list.find((m) => String(m.id) === String(motionId));
+      if (found) {
+        setMotion(found);
+        return;
+      }
+    }
+
+    // fallback to sample data (read-only). Map sample motion to app shape.
+    try {
+      if (Array.isArray(sampleData)) {
+        const commit = sampleData.find((c) => String(c.id) === String(committeeId));
+        if (commit && Array.isArray(commit.motionList)) {
+          const found = commit.motionList.find((m) => String(m.id) === String(motionId));
+          if (found) {
+            const mapped = {
+              id: String(found.id),
+              title: found.name || found.title || '',
+              description: found.description || '',
+              debate_list: [],
+              timestamp: Date.now(),
+              author: found.author || '',
+              status: found.status,
+            };
+            setMotion(mapped);
             return;
           }
-          if (data && Array.isArray(data.motion_list)) {
-            const found = data.motion_list.find((m) => String(m.id) === String(motionId));
-            if (found) setMotion(found);
-          }
-        })
-        .catch((e) => console.warn('Failed to load motion from API', e));
-    });
-    return () => { mounted = false };
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+    // if not found, keep null (shows Loading...)
   }, [committeeId, motionId]);
 
   const updateData = (updatedMotion) => {
-    // Update via API (no localStorage fallback). Optimistically update UI on success.
-    import('../lib/api').then(({ fetchJson }) => {
-      fetchJson('/.netlify/functions/motions', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ committeeId, motion: updatedMotion }),
-      })
-        .then(() => setMotion(updatedMotion))
-        .catch((e) => console.warn('Failed to update motion via API', e));
-    });
+    const key = committeeId ? `motions_${committeeId}` : 'motions';
+    const stored = JSON.parse(localStorage.getItem(key)) || [];
+    if (Array.isArray(stored)) {
+      const idx = stored.findIndex((m) => String(m.id) === String(motionId));
+      if (idx !== -1) stored[idx] = updatedMotion;
+      else stored.push(updatedMotion);
+      localStorage.setItem(key, JSON.stringify(stored));
+    } else {
+      const list = stored.motion_list || [];
+      const idx = list.findIndex((m) => String(m.id) === String(motionId));
+      if (idx !== -1) list[idx] = updatedMotion;
+      else list.push(updatedMotion);
+      localStorage.setItem(key, JSON.stringify({ ...stored, motion_list: list }));
+    }
+    setMotion(updatedMotion);
   };
 
   const handleSecond = () => {

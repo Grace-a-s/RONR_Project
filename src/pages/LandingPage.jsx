@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Container from '@mui/material/Container';
 import Box from '@mui/material/Box';
@@ -19,23 +19,39 @@ function LandingPage() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [committees, setCommittees] = useState([]);
+  const skipPersist = useRef(true);
+
+useEffect(() => {
+    try {
+      const raw = localStorage.getItem('committees');
+      if (raw) {
+        setCommittees(JSON.parse(raw));
+      } else if (Array.isArray(sampleData)) {
+        const mapped = sampleData.map((c) => ({
+          id: String(c.id),
+          name: c.name || `Committee ${c.id}`,
+          description: c.description || c.description || '',
+          createdAt: Date.now(),
+          members: c.memberList || [],
+        }));
+        setCommittees(mapped);
+      }
+    } catch (e) {
+      console.warn('Failed to load committees', e);
+    }
+  }, []);
 
   useEffect(() => {
-    let mounted = true;
-    import('../lib/api').then(({ fetchJson }) => {        
-      fetchJson('/.netlify/functions/committees', {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-        }).then((data) => {
-          console.log("Data", data);
-          console.log("Committes list", data.committees);
-          if (!mounted) return;
-          if (data ) setCommittees(data.committees);
-        })
-        .catch((e) => console.warn('Failed to load committees from API', e));
-    });
-    return () => { mounted = false };
-  }, []);
+    if (skipPersist.current) {
+      skipPersist.current = false;
+      return;
+    }
+    try {
+      localStorage.setItem('committees', JSON.stringify(committees));
+    } catch (e) {
+      console.warn('Failed to save committees', e);
+    }
+  }, [committees]);
 
   const handleCreate = (e) => {
     e.preventDefault();
@@ -47,23 +63,10 @@ function LandingPage() {
       description: description.trim(),
       createdAt: Date.now(),
     };
-    console.log('Creating committee (client):', newCommittee);
-    import('../lib/api').then(({ fetchJson }) => {
-      fetchJson('/.netlify/functions/committees', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newCommittee.name, description: newCommittee.description }),
-      })
-        .then((data) => {
-          console.log('Create committee response:', data);
-          if (data && data.committee) setCommittees((c) => [...c, data.committee]);
-        })
-        .catch((e) => console.warn('Failed to create committee', e));
-    });
+    setCommittees((c) => [...c, newCommittee]);
     setName('');
     setDescription('');
     setOpen(false);
-    console.log("Current committees", committees);
   };
 
   const { user, isAuthenticated, isLoading } = useAuth0();
