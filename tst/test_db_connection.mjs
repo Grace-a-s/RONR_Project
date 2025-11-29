@@ -2,7 +2,7 @@
 Simple script for testing database connection. Run from root directory using node
 */
 
-import { connectDatabase } from "./db.mjs";
+import { connectDatabase } from "../netlify/functions/db.mjs";
 
 try {
     await connectDatabase();
