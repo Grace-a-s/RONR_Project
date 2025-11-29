@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 
 const { Schema, model } = mongoose;
 
-const committeeMembershipSchema = new Schema({
+const membershipSchema = new Schema({
   userId: {
     type: Schema.Types.ObjectId,
     ref: 'User',
@@ -21,6 +21,6 @@ const committeeMembershipSchema = new Schema({
   timestamps: true
 });
 
-const CommitteeMembership = model('CommitteeMembership', committeeMembershipSchema);
+const Membership = model('Membership', membershipSchema);
 
-export default CommitteeMembership;
+export default Membership;
