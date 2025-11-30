@@ -15,7 +15,7 @@ const voteSchema = new Schema({
   },
   position: {
     type: String,
-    enum: ["SUPPORT", "OPPOSE", "NEUTRAL"],
+    enum: ["SUPPORT", "OPPOSE"],
     required: true
   }
 }, {
