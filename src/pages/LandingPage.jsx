@@ -11,6 +11,7 @@ import Grid from '@mui/material/Grid';
 import AddIcon from '@mui/icons-material/Add';
 import { useAuth0 } from '@auth0/auth0-react';
 import sampleData from '../test_committee_data.json';
+import { useUsersApi } from '../utils/usersApi';
 
 
 function LandingPage() {
@@ -20,6 +21,7 @@ function LandingPage() {
   const [description, setDescription] = useState('');
   const [committees, setCommittees] = useState([]);
   const skipPersist = useRef(true);
+  const syncedUserIdRef = useRef(null);
 
 useEffect(() => {
     try {
@@ -70,6 +72,47 @@ useEffect(() => {
   };
 
   const { user, isAuthenticated, isLoading } = useAuth0();
+  const { upsertCurrentUser } = useUsersApi();
+  const userId = user?.sub || null;
+  const userEmail = user?.email || null;
+
+  console.log("USER ID", userId);
+
+  useEffect(() => {
+    if (isLoading || !isAuthenticated || !userId) return;
+    if (syncedUserIdRef.current === userId) return;
+
+    let cancelled = false;
+    // TOOD: Configure sign up to allow user to provide first name, last name, and username
+    const derivedFirstName = 'First Name';
+    const derivedLastName = 'Last Name';
+    const usernameFromEmail = userEmail ? userEmail.split('@')[0] : null;
+
+    const payload = {
+      auth0Id: userId,
+      email: userEmail,
+      username: usernameFromEmail,
+      firstName: derivedFirstName,
+      lastName: derivedLastName,
+    };
+
+    const syncUser = async () => {
+      try {
+        await upsertCurrentUser(payload);
+        if (!cancelled) {
+          syncedUserIdRef.current = userId;
+        }
+      } catch (err) {
+        console.error('Failed to sync user profile', err);
+      }
+    };
+
+    syncUser();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, isLoading, upsertCurrentUser, userEmail, userId]);
 
   
 
