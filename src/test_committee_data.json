@@ -1,0 +1,89 @@
+[
+    {
+        "id": 1,
+        "name": "Budget Committee",
+        "description": "For creating budgets",
+        "owner": "sadie",
+        "members": [
+            {
+                "id": 5,
+                "name": "sadie",
+                "role": "member"
+            },
+            {
+                "id": 1,
+                "name": "comfy",
+                "role":"chair"
+            },
+            {
+                "id": 2,
+                "name": "abby",
+                "role": "owner"
+            },
+            {
+                "id": 3,
+                "name": "naomi",
+                "role": "member"
+            }
+        ],
+        "motions": [
+            {
+                "id": 1,
+                "name": "Budget Request",
+                "author": "comfy",
+                "description": "I move that we increase our budget",
+                "status": "SECONDING" 
+            },
+            {
+                "id": 2,
+                "name": "Oh is that another motion",
+                "author": "abby",
+                "description": "Some funky description",
+                "status": "DEBATE"
+            }
+
+        ]
+    },
+    {
+        "id": 2,
+        "name": "Tech Committee",
+        "owner": "comfy",
+        "members": [
+            {
+                "id": 5,
+                "name": "sadie",
+                "role": "chair"
+            },
+            {
+                "id": 1,
+                "name": "comfy",
+                "role":"owner"
+            },
+            {
+                "id": 2,
+                "name": "abby",
+                "role": "owner"
+            },
+            {
+                "id": 3,
+                "name": "naomi",
+                "role": "member"
+            },
+            {
+                "id": 4,
+                "name": "lori",
+                "role": "member"
+            }
+        ],
+        "motions": [
+            {
+                "id": 1,
+                "name": "Budget Request",
+                "author": "comfy",
+                "description": "I move that we increase our budget",
+                "status": "SECONDING"
+            }
+        ]
+
+    }
+]

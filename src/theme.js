@@ -4,8 +4,8 @@ const theme = createTheme({
   palette: {
     mode: 'light',
     primary: { main: '#22577A' },
-    secondary: { main: '#57cc99' },
-    background: { default: '#c7f9cc' },
+    secondary: { main: '#57CC99' },
+    background: { default: '#dbf6ebff' },
   },
   typography: {
     fontFamily: 'Inter, Arial, sans-serif',
@@ -13,11 +13,11 @@ const theme = createTheme({
   components: {
     MuiCssBaseline: {
       styleOverrides: {
-        'html, body': {
-          backgroundColor: '#c7f9cc',
-          margin: 0,
-          padding: 0,
-          fontFamily: 'Inter, Arial, sans-serif',
+        body: {
+          background: `linear-gradient(to bottom, rgba(87, 204, 153, 0.68) 0%, rgba(34,87,122,0.06) 100%)`,
+          backgroundRepeat: 'no-repeat',
+          backgroundAttachment: 'fixed',
+          minHeight: '100vh',
         },
       },
     },

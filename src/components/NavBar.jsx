@@ -35,13 +35,18 @@ function NavBar() {
             },
         });
     }
+
+    const openUserProfilePage = () => {
+        setAnchorEl(null);
+        navigate('/user-profile');
+    };
     
     return (
         <>
-            <AppBar position="static" sx={{ backgroundColor: '#22577A', color: '#fff' }} elevation={0}>
+            <AppBar position="static" sx={{ backgroundColor: 'primary.main', color: '#fff' }} elevation={0}>
                 <Toolbar>
                     <Tooltip title="Home">
-                        <IconButton edge="start" color="inherit" onClick={() => navigate('/')} aria-label="home">
+                        <IconButton edge="start" color="inherit" onClick={() => navigate('/home')} aria-label="home">
                             <HomeIcon sx={{ color: '#fff' }} />
                         </IconButton>
                     </Tooltip>
@@ -73,11 +78,11 @@ function NavBar() {
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
                 transformOrigin={{ vertical: 'top', horizontal: 'right' }}
             >
-                <MenuItem onClick={handleCloseMenu}>
+                <MenuItem onClick={openUserProfilePage}>
                     <ListItemIcon>
                         <Settings fontSize="small" />
                     </ListItemIcon>
-                    Settings
+                    My Profile
                 </MenuItem>
                 <MenuItem onClick={handleSignOut}>
                     <ListItemIcon>
