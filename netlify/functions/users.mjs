@@ -7,13 +7,13 @@ import { getUser, createUser, updateUser } from "./controller/userController.mjs
 
 const router = createRouter();
 
-router.get("/user/me", async ({ req }) => {
+router.get("/users/me", async ({ req }) => {
   const { user, error } = await authGuard(req);
   if (error) return error;
   return getUser(user);
 });
 
-router.post("/user/me", async ({ req, body }) => {
+router.post("/users/me", async ({ req, body }) => {
   const { user, error } = await authGuard(req);
   if (error) return error;
   
@@ -21,7 +21,10 @@ router.post("/user/me", async ({ req, body }) => {
   if (user && user.sub) {
     // Try to get existing user first
     const existingUserResponse = await getUser(user);
-    const existingUser = JSON.parse(existingUserResponse.body || "{}");
+    let existingUser = null;
+    if (existingUserResponse.body) {
+      existingUser = await existingUserResponse.json();
+    }
     
     if (existingUser && existingUser._id) {
       // User exists, update them
