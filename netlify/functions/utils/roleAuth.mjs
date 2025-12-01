@@ -1,4 +1,3 @@
-import { RollerShades } from '@mui/icons-material';
 import Membership from '../model/Membership.mjs';
 
 // Helper function for retrieving user's role within a committee
