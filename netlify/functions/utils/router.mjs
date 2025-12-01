@@ -1,4 +1,3 @@
-// router.mjs
 export function createRouter() {
     const routes = [];
 

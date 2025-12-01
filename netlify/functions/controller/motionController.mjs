@@ -54,7 +54,6 @@ export async function getMotionById(user, motionId) {
 }
 
 export async function secondMotion(user, motionId) {
-    // TODO: Check user permissions...
     return updateMotionStatus(user, motionId, "SECONDED");
 }
 
@@ -62,7 +61,6 @@ export async function approveMotion(user, motionId, body) {
     if (!body) return new Response(JSON.stringify({ error: 'body required' }), { status: 400, headers: { 'content-type': 'application/json' } });
 
 	const { action } = body;
-    // TODO: Check user permissions...
 
     if (action === "APPROVE") {
         return updateMotionStatus(user, motionId, "DEBATE");
@@ -74,8 +72,7 @@ export async function approveMotion(user, motionId, body) {
 }
 
 export async function openVote(user, motionId) {
-    // TODO: Check user permissions...
-    return updateMotionStatus(user, motionId, "VOTING");
+    return updateMotionStatus(motionId, "VOTING");
 }
 
 export async function closeVote(motionId, result){
