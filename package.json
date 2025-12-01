@@ -21,8 +21,6 @@
     "@mui/x-data-grid": "^8.18.0",
     "dotenv": "^17.2.3",
     "jose": "^6.1.2",
-    "jsonwebtoken": "^9.0.2",
-    "jwks-rsa": "^3.2.0",
     "mongoose": "^9.0.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
