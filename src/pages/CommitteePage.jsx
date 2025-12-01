@@ -123,7 +123,7 @@ function CommitteePage() {
       {/* Breadcrumb */}
       <Box sx={{ mb: 2 }}>
         <Box
-          onClick={() => navigate('/home')}
+          onClick={() => navigate('/')}
           sx={{ display: 'inline-flex', alignItems: 'center', gap: 1, cursor: 'pointer', color: 'text.primary' }}
           aria-label="Back to main page"
         >

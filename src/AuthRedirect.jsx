@@ -9,7 +9,7 @@ export default function AuthRedirect({ signup = false }) {
   useEffect(() => {
     if (isLoading) return;
     if (isAuthenticated) {
-      navigate("/committee", { replace: true });
+      navigate("/home", { replace: true });
       return;
     }
     // open hosted login; if signup=true, ask Auth0 to show signup

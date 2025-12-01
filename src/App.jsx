@@ -20,23 +20,20 @@ function App() {
 
   return (
       <Router>
-        {/* <Auth0ProviderWithNavigate> */}
+        <Auth0ProviderWithNavigate>
           <NavBar/>
           <Routes>
-            {/* TODO: Add this: element={<AuthRedirect/>} */}
-            <Route path="/"  />
             <Route 
-              path="/home" 
-              element={
-                  <LandingPage />
-              } 
+              path="/" 
+              element={<AuthRedirect/>}
             />
+            <Route path="/home" element={<LandingPage />} />
             <Route path="/committee/:committeeId/motion/:motionId" element={<MotionPage />} />
             <Route path="/committee/:committeeId" element={<CommitteePage />} />
             <Route path="/user-profile" element={<UserProfilePage/>} />
             <Route path="/committee/:committeeId/membership" element={<CommitteeMembershipPage />} />
           </Routes>
-        {/* </Auth0ProviderWithNavigate> */}
+        </Auth0ProviderWithNavigate>
       </Router>
   );
   // return (
