@@ -12,17 +12,33 @@ const JWKS = createRemoteJWKSet(
 
 // Function for verifying authorization for request and retrieving user data from Auth0
 export async function verifyAuth(req) {
-    // Retrieve jwt (token) from request header
-    if (!req || !req.headers) 
-        return new Response(JSON.stringify({ error: "Missing request or headers" }), { status: 401, headers: { 'content-type': 'application/json' } });
+    // Extracting jwt from header
+    if (!req || !req.headers) {
+        throw new Response(
+            JSON.stringify({ error: 'Missing request or headers' }),
+            { status: 400, headers: { 'content-type': 'application/json' } }
+        );
+    }
 
     const authHeader = req.headers.authorization;
-    if (!authHeader) 
-        return new Response(JSON.stringify({ error: "Missing authorization header" }), { status: 401, headers: { 'content-type': 'application/json' } });
+
+    if (!authHeader) {
+        throw new Response(
+            JSON.stringify({ error: 'Missing authorization header' }),
+            { status: 401, headers: { 'content-type': 'application/json' } }
+        );
+    }
 
     const token = authHeader.replace('Bearer ', '');
 
-    // Get payload from token (contains user data from Auth0)
+    if (!token) {
+        throw new Response(
+            JSON.stringify({ error: 'Authorization header must contain Bearer token' }),
+            { status: 401, headers: { 'content-type': 'application/json' } }
+        );
+    }
+
+    // Attempt to retrieve payload from token
     try {
         const {payload, protectedHeader} = await jwtVerify(token, JWKS, {
             issuer: ISSUER,
@@ -30,7 +46,9 @@ export async function verifyAuth(req) {
         });
         return payload;
     } catch (e) {
-        // verification failed
-        return null;
+        throw new Response(
+            JSON.stringify({ error: 'Invalid or expired token' }),
+            { status: 401, headers: { 'content-type': 'application/json' } }
+        );
     }
 }

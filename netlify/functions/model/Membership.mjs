@@ -4,7 +4,7 @@ const { Schema, model } = mongoose;
 
 const membershipSchema = new Schema({
   userId: {
-    type: Schema.Types.ObjectId,
+    type: String,
     ref: 'User',
     required: true
   },

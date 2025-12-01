@@ -9,7 +9,7 @@ const voteSchema = new Schema({
     required: true
   },
   authorId: {
-    voterId: Schema.Types.ObjectId,
+    type: String,
     ref: 'User',
     required: true
   },

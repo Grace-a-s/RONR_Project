@@ -8,11 +8,11 @@ export async function createUser(_user, body) {
     if (!auth0Id) return new Response(JSON.stringify({ error: 'auth0Id required' }), { status: 400, headers: { 'content-type': 'application/json' } });
 
     // avoid duplicate creation
-    const existing = await User.findOne({ auth0Id }).lean();
+    const existing = await User.findById(auth0Id).lean();
     if (existing) return new Response(JSON.stringify(existing), { status: 200, headers: { 'content-type': 'application/json' } });
 
     const toCreate = {
-      auth0Id,
+      _id: auth0Id,
       username: body.username || null,
       email: body.email || null,
       firstName: body.firstName || null,
@@ -31,7 +31,7 @@ export async function getUser(_user, auth0Id) {
     const id = auth0Id || (_user && _user.sub);
     if (!id) return new Response(JSON.stringify({ error: 'auth0Id required' }), { status: 400, headers: { 'content-type': 'application/json' } });
 
-    const u = await User.findOne({ auth0Id: id }).lean();
+    const u = await User.findById(id).lean();
     if (!u) return new Response(JSON.stringify({ error: 'User not found' }), { status: 404, headers: { 'content-type': 'application/json' } });
     return new Response(JSON.stringify(u), { status: 200, headers: { 'content-type': 'application/json' } });
   } catch (err) {
@@ -53,7 +53,7 @@ export async function updateUser(_user, auth0Id, body) {
 
     if (Object.keys(update).length === 0) return new Response(JSON.stringify({ error: 'nothing to update' }), { status: 400, headers: { 'content-type': 'application/json' } });
 
-    const updated = await User.findOneAndUpdate({ auth0Id: id }, update, { new: true }).lean();
+    const updated = await User.findByIdAndUpdate(id, update, { new: true }).lean();
     if (!updated) return new Response(JSON.stringify({ error: 'User not found' }), { status: 404, headers: { 'content-type': 'application/json' } });
     return new Response(JSON.stringify(updated), { status: 200, headers: { 'content-type': 'application/json' } });
   } catch (err) {

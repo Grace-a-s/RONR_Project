@@ -20,7 +20,7 @@ export async function createDebate(user, motionId, body) {
 		if (!motion) 
             return new Response(JSON.stringify({ error: 'Motion not found' }), { status: 404, headers: { 'content-type': 'application/json' } });
 
-        if (!motion.status !== "DEBATE")
+        if (motion.status !== "DEBATE")
             return new Response(JSON.stringify({ error: 'motion status is not DEBATE' }), { status: 403, headers: { 'content-type': 'application/json' } });
 
 		const authorId = (user && user.sub) ? user.sub : body.authorId;

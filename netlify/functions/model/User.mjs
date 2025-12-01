@@ -3,7 +3,10 @@ import mongoose from 'mongoose';
 const { Schema, model } = mongoose;
 
 const userSchema = new Schema({
-  auth0Id: String,
+  _id: {
+    type: String,
+    required: true
+  },
   username: String,
   email: String,
   firstName: String,

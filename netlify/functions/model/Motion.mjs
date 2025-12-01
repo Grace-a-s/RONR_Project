@@ -9,7 +9,7 @@ const motionSchema = new Schema({
     required: true
   },
   authorId: {
-    type: Schema.Types.ObjectId,
+    type: String,
     ref: 'User',
     required: true
   },

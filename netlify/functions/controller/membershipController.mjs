@@ -11,7 +11,7 @@ export async function getMembers(user, committeeId) {
     const committee = await Committee.findById(committeeId);
     if (!committee) return new Response(JSON.stringify({ error: 'Committee not found' }), { status: 404, headers: { 'content-type': 'application/json' } });
 
-    const members = await Membership.find({ committeeId }).populate('userId', 'name email');
+    const members = await Membership.find({ committeeId }).populate('userId', 'username email firstName lastName');
     return new Response(JSON.stringify(members), { status: 200, headers: { 'content-type': 'application/json' } });
   } catch (err) {
     return new Response(JSON.stringify({ error: err.toString() }), { status: 500, headers: { 'content-type': 'application/json' } });

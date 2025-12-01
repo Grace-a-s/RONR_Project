@@ -54,7 +54,7 @@ export async function getMotionById(user, motionId) {
 }
 
 export async function secondMotion(user, motionId) {
-    return updateMotionStatus(user, motionId, "SECONDED");
+    return updateMotionStatus(motionId, "SECONDED");
 }
 
 export async function approveMotion(user, motionId, body) {
@@ -63,9 +63,9 @@ export async function approveMotion(user, motionId, body) {
 	const { action } = body;
 
     if (action === "APPROVE") {
-        return updateMotionStatus(user, motionId, "DEBATE");
+        return updateMotionStatus(motionId, "DEBATE");
     } else if (action == "VETO") {
-        return updateMotionStatus(user, motionId, "VETOED");
+        return updateMotionStatus(motionId, "VETOED");
     }
 
     return new Response(JSON.stringify({ error: 'invalid chair action' }), { status: 400, headers: { 'content-type': 'application/json' } });
@@ -95,7 +95,7 @@ async function updateMotionStatus(motionId, newMotionStatus) {
         if (!checkValidMotionStatus(motionId, newMotionStatus))
             return new Response(JSON.stringify({ error: 'cannot change motion status' }), { status: 403, headers: { 'content-type': 'application/json' } });
 
-		const updated = await Motion.findByIdAndUpdate(motionId, { status: body.status }, { new: true }).lean();
+		const updated = await Motion.findByIdAndUpdate(motionId, { status: newMotionStatus }, { new: true }).lean();
 		if (!updated) 
             return new Response(JSON.stringify({ error: 'Motion not found' }), { status: 404, headers: { 'content-type': 'application/json' } });
 		return new Response(JSON.stringify(updated), { status: 200, headers: { 'content-type': 'application/json' } });

@@ -11,25 +11,27 @@ import Motion from './model/Motion.mjs';
 const router = createRouter();
 
 router.post('/committees/:id/motions', async ({req, params, body}) => {
-  const { user } = await authGuard(req);
+  const { user, error } = await authGuard(req);
   if (error) return error;
   return createMotion(user, params.id, body);
 });
 
 router.get('/committees/:id/motions', async ({req, params, body}) => {
-  const { user } = await authGuard(req);
+  const { user, error } = await authGuard(req);
+  if (error) return error;
   return getAllMotions(user, params.id);
 });
 
 router.get('/motions/:id', async ({req, params}) => {
-  const { user } = await authGuard(req);
+  const { user, error } = await authGuard(req);
+  if (error) return error;
   return getMotionById(user, params.id);
 });
 
 router.post('/motions/:id/second', async ({req, params, body}) => {
   // any authenticated user (not the author) may second a motion
-  const { user } = await authGuard(req);
-  if (!user) return new Response(JSON.stringify({ error: 'authentication required' }), { status: 401, headers: { 'content-type': 'application/json' } });
+  const { user, error } = await authGuard(req);
+  if (error) return error;
 
   const motionId = params.id;
   const motion = await Motion.findById(motionId).lean();
@@ -53,7 +55,7 @@ router.post('/motions/:id/chair/approve', async ({req, params, body}) => {
   return approveMotion(user, motionId, body);
 });
 
-router.post('/motion/:id/debate', async ({req, params, body}) => {
+router.post('/motions/:id/debate', async ({req, params, body}) => {
   // debate participants must be committee members
   const motionId = params.id;
   const motion = await Motion.findById(motionId).lean();
@@ -65,7 +67,8 @@ router.post('/motion/:id/debate', async ({req, params, body}) => {
 });
 
 router.get('/motions/:id/debate', async ({req, params}) => {
-  const { user } = await authGuard(req);
+  const { user, error } = await authGuard(req);
+  if (error) return error;
   const motionId = params.id;
   return getAllDebates(user, motionId);
 });
@@ -82,7 +85,8 @@ router.post('/motions/:id/vote', async ({req, params, body}) => {
 });
 
 router.get('/motions/:id/vote', async ({req, params, body}) => {
-  const { user } = await authGuard(req);
+  const { user, error } = await authGuard(req);
+  if (error) return error;
   const motionId = params.id;
   return getAllVotes(user, motionId);
 });

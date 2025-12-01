@@ -10,28 +10,33 @@ const router = createRouter();
 
 // Define and add routes to router
 router.get("/committees", async ({ req, body }) => {
-  const { user } = await authGuard(req);
+  const { user, error } = await authGuard(req);
+  if (error) return error;
   return getAllCommittees(user, body);
 });
 
 router.post('/committees', async ({req, body}) => {
-  const { user } = await authGuard(req);
+  const { user, error } = await authGuard(req);
+  if (error) return error;
   return createCommittee(user, body);
 });
 
 router.get('/committees/:id', async ({req, params}) => {
-  const { user } = await authGuard(req);
+  const { user, error } = await authGuard(req);
+  if (error) return error;
   return getCommitteeById(user, params.id);
 });
 
 router.patch('/committees/:id', async ({req, params, body}) => {
   // only OWNER can update committee data
-  const { user } = await authGuard(req, ["OWNER"], params.id);
+  const { user, error } = await authGuard(req, ["OWNER"], params.id);
+  if (error) return error;
   return updateCommitteeById(user, params.id, body);
 });
 
 router.get('/committees/:id/member', async ({req, params}) => {
-  const { user } = await authGuard(req);
+  const { user, error } = await authGuard(req);
+  if (error) return error;
   return getMembers(user, params.id);
 });
 
