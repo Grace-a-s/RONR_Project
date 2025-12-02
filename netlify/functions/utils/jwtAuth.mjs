@@ -20,7 +20,7 @@ export async function verifyAuth(req) {
         );
     }
 
-    const authHeader = req.headers.authorization;
+    const authHeader = req.headers.get("authorization");
 
     if (!authHeader) {
         throw new Response(
