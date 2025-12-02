@@ -20,6 +20,7 @@ function LandingPage() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [committees, setCommittees] = useState([]);
+  const [profile, setProfile] = useState(null);
   const skipPersist = useRef(true);
   const syncedUserIdRef = useRef(null);
 
@@ -72,35 +73,44 @@ useEffect(() => {
   };
 
   const { user, isAuthenticated, isLoading } = useAuth0();
-  const { upsertCurrentUser } = useUsersApi();
+  const { getCurrentUser, upsertCurrentUser } = useUsersApi();
   const userId = user?.sub || null;
   const userEmail = user?.email || null;
-
-  console.log("USER ID", userId);
 
   useEffect(() => {
     if (isLoading || !isAuthenticated || !userId) return;
     if (syncedUserIdRef.current === userId) return;
 
     let cancelled = false;
-    // TOOD: Configure sign up to allow user to provide first name, last name, and username
-    const derivedFirstName = 'First Name';
-    const derivedLastName = 'Last Name';
     const usernameFromEmail = userEmail ? userEmail.split('@')[0] : null;
-
-    const payload = {
-      auth0Id: userId,
-      email: userEmail,
-      username: usernameFromEmail,
-      firstName: derivedFirstName,
-      lastName: derivedLastName,
-    };
 
     const syncUser = async () => {
       try {
-        await upsertCurrentUser(payload);
+        let usernameToUse = usernameFromEmail;
+        try {
+          const existingUser = await getCurrentUser();
+          if (existingUser) {
+            if (existingUser.username) {
+              usernameToUse = existingUser.username;
+            }
+            if (!cancelled) {
+              setProfile(existingUser);
+            }
+          }
+        } catch (lookupErr) {
+          if (lookupErr?.status !== 404) {
+            console.error('Failed to load existing user profile', lookupErr);
+          }
+        }
+
+        const updated = await upsertCurrentUser({
+          auth0Id: userId,
+          email: userEmail,
+          username: usernameToUse,
+        });
         if (!cancelled) {
           syncedUserIdRef.current = userId;
+          setProfile((prev) => prev || updated || null);
         }
       } catch (err) {
         console.error('Failed to sync user profile', err);
@@ -112,7 +122,7 @@ useEffect(() => {
     return () => {
       cancelled = true;
     };
-  }, [isAuthenticated, isLoading, upsertCurrentUser, userEmail, userId]);
+  }, [getCurrentUser, isAuthenticated, isLoading, upsertCurrentUser, userEmail, userId]);
 
   
 
@@ -128,10 +138,10 @@ useEffect(() => {
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 10, gap: 2 }}>
         <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
-          <Typography variant="h2" component="h1" sx={{ lineHeight: 1, fontWeight: 400 }}>Welcome back, {user?.name || 'User'}!</Typography>
-          <Typography variant="h6" component="h2" sx={{ mt: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <Typography variant="h2" component="h1" sx={{ lineHeight: 1, fontWeight: 400 }}>Welcome, {profile?.username || user?.name || 'User'}!</Typography>
+          {/* <Typography variant="h6" component="h2" sx={{ mt: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             You have [#] motions across [#] committees
-          </Typography>
+          </Typography> */}
         </Box>
 
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
