@@ -17,22 +17,28 @@ import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import ListItemText from '@mui/material/ListItemText';
 import Divider from '@mui/material/Divider';
+import CircularProgress from '@mui/material/CircularProgress';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SendIcon from '@mui/icons-material/Send';
+import HowToVoteIcon from '@mui/icons-material/HowToVote';
 import { useAuth0 } from "@auth0/auth0-react";
 import sampleData from '../test_committee_data.json';
+import VotingPanel from '../components/VotingPanel';
+import { openVoting } from '../lib/api';
 
 function MotionPage() {
   const { committeeId, motionId } = useParams();
   const navigate = useNavigate();
 
    // TODO: Implement role-based views of motion page
-  const { user } = useAuth0();
+  const { user, getAccessTokenSilently } = useAuth0();
 
   const [motion, setMotion] = useState(null);
   const [showDebate, setShowDebate] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const [textInput, setTextInput] = useState('');
+  const [votingPanelOpen, setVotingPanelOpen] = useState(false);
+  const [openingVote, setOpeningVote] = useState(false);
 
   useEffect(() => {
     const key = committeeId ? `motions_${committeeId}` : 'motions';
@@ -114,6 +120,32 @@ function MotionPage() {
 
   const toggleDebate = () => setShowDebate((s) => !s);
 
+  const handleProposeVote = async () => {
+    try {
+      setOpeningVote(true);
+      const token = await getAccessTokenSilently();
+      const updatedMotion = await openVoting(motionId, token);
+      setMotion(updatedMotion);
+      updateData(updatedMotion);
+    } catch (error) {
+      console.error('Failed to open voting:', error);
+      alert(error.message || 'Failed to open voting. You may need CHAIR role.');
+    } finally {
+      setOpeningVote(false);
+    }
+  };
+
+  const handleVoteSuccess = (result) => {
+    if (result && result.motion) {
+      setMotion(result.motion);
+      updateData(result.motion);
+
+      if (result.motion.status === 'PASSED' || result.motion.status === 'REJECTED') {
+        setVotingPanelOpen(false);
+      }
+    }
+  };
+
   if (!motion) return <Container sx={{ py: 6 }}><Typography>Loading...</Typography></Container>;
 
   return (
@@ -183,11 +215,46 @@ function MotionPage() {
               <Button variant="contained" endIcon={<SendIcon />} onClick={handleDebateSubmit} disabled={!motion.second || !textInput.trim()}>
                 Send
               </Button>
-              <Button variant="outlined">Propose Vote</Button>
+              {motion.status === 'DEBATE' && (
+                <Button
+                  variant="outlined"
+                  onClick={handleProposeVote}
+                  disabled={openingVote}
+                  startIcon={openingVote ? <CircularProgress size={20} /> : null}
+                >
+                  {openingVote ? 'Opening...' : 'Propose Vote'}
+                </Button>
+              )}
+              {motion.status === 'VOTING' && (
+                <Button
+                  variant="contained"
+                  onClick={() => setVotingPanelOpen(true)}
+                  startIcon={<HowToVoteIcon />}
+                  sx={{ bgcolor: '#57CC99', '&:hover': { bgcolor: '#45a87d' } }}
+                >
+                  Vote
+                </Button>
+              )}
+              {(motion.status === 'PASSED' || motion.status === 'REJECTED') && (
+                <Button
+                  variant="outlined"
+                  onClick={() => setVotingPanelOpen(true)}
+                  startIcon={<HowToVoteIcon />}
+                >
+                  View Results
+                </Button>
+              )}
             </Box>
           </Paper>
         </Box>
       </Box>
+
+      <VotingPanel
+        open={votingPanelOpen}
+        onClose={() => setVotingPanelOpen(false)}
+        motion={motion}
+        onVoteSuccess={handleVoteSuccess}
+      />
     </>
   );
 }

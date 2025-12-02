@@ -28,3 +28,47 @@ export async function fetchJson(url, options) {
   if (!res.ok) throw new Error(text || `HTTP ${res.status}`);
   return text;
 }
+
+// Voting API Functions
+
+export async function castVote(motionId, position, token) {
+  const url = `/.netlify/functions/motions/${motionId}/vote`;
+  return fetchJson(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ position }),
+  });
+}
+
+export async function getVotes(motionId, token) {
+  const url = `/.netlify/functions/motions/${motionId}/vote`;
+  return fetchJson(url, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export async function openVoting(motionId, token) {
+  const url = `/.netlify/functions/motions/${motionId}/chair/open-vote`;
+  return fetchJson(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
+export async function getCommitteeMemberCount(committeeId, token) {
+  const url = `/.netlify/functions/committees/${committeeId}/memberships`;
+  return fetchJson(url, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
