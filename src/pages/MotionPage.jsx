@@ -21,18 +21,26 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SendIcon from '@mui/icons-material/Send';
 import { useAuth0 } from "@auth0/auth0-react";
 import sampleData from '../test_committee_data.json';
+import VotingPanel from '../components/VotingPanel';
+import { openVote, setAuthTokenGetter } from '../lib/api';
 
 function MotionPage() {
   const { committeeId, motionId } = useParams();
   const navigate = useNavigate();
 
    // TODO: Implement role-based views of motion page
-  const { user } = useAuth0();
+  const { user, getAccessTokenSilently } = useAuth0();
 
   const [motion, setMotion] = useState(null);
   const [showDebate, setShowDebate] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const [textInput, setTextInput] = useState('');
+  const [votingPanelOpen, setVotingPanelOpen] = useState(false);
+
+  // Set up auth token getter for API calls
+  useEffect(() => {
+    setAuthTokenGetter(getAccessTokenSilently);
+  }, [getAccessTokenSilently]);
 
   useEffect(() => {
     const key = committeeId ? `motions_${committeeId}` : 'motions';
@@ -114,6 +122,26 @@ function MotionPage() {
 
   const toggleDebate = () => setShowDebate((s) => !s);
 
+  const handleProposeVote = async () => {
+    if (!motion) return;
+
+    try {
+      // Call API to update motion status to VOTING
+      await openVote(motionId);
+
+      // Update local motion state with new status
+      const updatedMotion = { ...motion, status: 'VOTING' };
+      setMotion(updatedMotion);
+      updateData(updatedMotion);
+
+      // Open the voting panel
+      setVotingPanelOpen(true);
+    } catch (error) {
+      console.error('Failed to open vote:', error);
+      alert(`Failed to open vote: ${error.message}`);
+    }
+  };
+
   if (!motion) return <Container sx={{ py: 6 }}><Typography>Loading...</Typography></Container>;
 
   return (
@@ -183,11 +211,31 @@ function MotionPage() {
               <Button variant="contained" endIcon={<SendIcon />} onClick={handleDebateSubmit} disabled={!motion.second || !textInput.trim()}>
                 Send
               </Button>
-              <Button variant="outlined">Propose Vote</Button>
+              {motion.status === 'VOTING' || motion.status === 'PASSED' || motion.status === 'REJECTED' ? (
+                <Button variant="outlined" onClick={() => setVotingPanelOpen(true)}>
+                  View Votes
+                </Button>
+              ) : (
+                <Button
+                  variant="outlined"
+                  onClick={handleProposeVote}
+                  disabled={motion.status === 'VOTING' || motion.status === 'PASSED' || motion.status === 'REJECTED'}
+                >
+                  Propose Vote
+                </Button>
+              )}
             </Box>
           </Paper>
         </Box>
       </Box>
+
+      <VotingPanel
+        open={votingPanelOpen}
+        onClose={() => setVotingPanelOpen(false)}
+        motion={motion}
+        committeeId={committeeId}
+        user={user}
+      />
     </>
   );
 }
