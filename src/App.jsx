@@ -23,13 +23,11 @@ function App() {
         <Auth0ProviderWithNavigate>
           <NavBar/>
           <Routes>
-            <Route path="/" element={<AuthRedirect/>} />
             <Route 
-              path="/home" 
-              element={
-                  <LandingPage />
-              } 
+              path="/" 
+              element={<AuthRedirect/>}
             />
+            <Route path="/home" element={<LandingPage />} />
             <Route path="/committee/:committeeId/motion/:motionId" element={<MotionPage />} />
             <Route path="/committee/:committeeId" element={<CommitteePage />} />
             <Route path="/user-profile" element={<UserProfilePage/>} />

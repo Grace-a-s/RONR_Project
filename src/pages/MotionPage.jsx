@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import AppBar from '@mui/material/AppBar';
 import Toolbar from '@mui/material/Toolbar';
@@ -26,7 +26,7 @@ function MotionPage() {
   const { committeeId, motionId } = useParams();
   const navigate = useNavigate();
 
-  // TODO: Implement role-based views of motion page
+   // TODO: Implement role-based views of motion page
   const { user } = useAuth0();
 
   const [motion, setMotion] = useState(null);

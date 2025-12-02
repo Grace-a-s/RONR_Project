@@ -21,7 +21,7 @@ function LandingPage() {
   const [committees, setCommittees] = useState([]);
   const skipPersist = useRef(true);
 
-  useEffect(() => {
+useEffect(() => {
     try {
       const raw = localStorage.getItem('committees');
       if (raw) {
@@ -70,6 +70,8 @@ function LandingPage() {
   };
 
   const { user, isAuthenticated, isLoading } = useAuth0();
+
+  
 
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);

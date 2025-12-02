@@ -31,9 +31,9 @@ function CommitteePage() {
   // key for per-committee motions in localStorage
   const storageKey = committeeId ? `motions_${committeeId}` : 'motions';
   const [committee, setCommittee] = useState(null);
+  const skipPersist = useRef(true);
 
-
-  // load saved motions for this committee from localStorage on mount
+ // load saved motions for this committee from localStorage on mount
   useEffect(() => {
     try {
       const saved = localStorage.getItem(storageKey);
@@ -123,7 +123,7 @@ function CommitteePage() {
       {/* Breadcrumb */}
       <Box sx={{ mb: 2 }}>
         <Box
-          onClick={() => navigate('/home')}
+          onClick={() => navigate('/')}
           sx={{ display: 'inline-flex', alignItems: 'center', gap: 1, cursor: 'pointer', color: 'text.primary' }}
           aria-label="Back to main page"
         >
