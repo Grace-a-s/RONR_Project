@@ -18,6 +18,7 @@ import ListItem from '@mui/material/ListItem';
 import ListItemText from '@mui/material/ListItemText';
 import Divider from '@mui/material/Divider';
 import CircularProgress from '@mui/material/CircularProgress';
+import Chip from '@mui/material/Chip';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SendIcon from '@mui/icons-material/Send';
 import HowToVoteIcon from '@mui/icons-material/HowToVote';
@@ -100,7 +101,7 @@ function MotionPage() {
 
   const handleSecond = () => {
     if (!motion) return;
-    const updatedMotion = { ...motion, second: true };
+    const updatedMotion = { ...motion, second: true, status: 'DEBATE' };
     updateData(updatedMotion);
   };
 
@@ -154,18 +155,41 @@ function MotionPage() {
         <Container sx={{ py: 4, flex: '1 1 auto' }}>
           <Box sx={{ display: 'flex', justifyContent: 'center' }}>
             <Paper variant="outlined" sx={{ bgcolor: '#57CC99', p: 3, maxWidth: 900, width: '100%' }}>
-              <Typography variant="h5" align="center">{motion.title}</Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h5">{motion.title}</Typography>
+                <Chip
+                  label={motion.status || 'PROPOSED'}
+                  color={
+                    motion.status === 'VOTING' ? 'primary' :
+                    motion.status === 'PASSED' ? 'success' :
+                    motion.status === 'REJECTED' ? 'error' :
+                    motion.status === 'DEBATE' ? 'warning' :
+                    'default'
+                  }
+                  sx={{ fontWeight: 600 }}
+                />
+              </Box>
               <Box sx={{ bgcolor: 'white', borderRadius: 1, mt: 2, p: 2 }}>
                 <Typography variant="body1" align="center" color="text.secondary" sx={{ whiteSpace: 'pre-wrap' }}>{motion.description}</Typography>
               </Box>
 
               <Box sx={{ mt: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Button variant="outlined" onClick={handleSecond} disabled={!!motion.second}>
-                  {motion.second ? 'Seconded' : 'Second'}
-                </Button>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Button variant="outlined" onClick={handleSecond} disabled={!!motion.second}>
+                    {motion.second ? 'Seconded' : 'Second'}
+                  </Button>
 
-                <Button variant="contained" onClick={toggleDebate} disabled={!motion.second}>
-                  View Debate
+                  <Button variant="contained" onClick={toggleDebate} disabled={!motion.second}>
+                    View Debate
+                  </Button>
+                </Box>
+
+                <Button
+                  variant="outlined"
+                  onClick={() => setVotingPanelOpen(true)}
+                  startIcon={<HowToVoteIcon />}
+                >
+                  Voting
                 </Button>
               </Box>
             </Paper>
@@ -223,25 +247,6 @@ function MotionPage() {
                   startIcon={openingVote ? <CircularProgress size={20} /> : null}
                 >
                   {openingVote ? 'Opening...' : 'Propose Vote'}
-                </Button>
-              )}
-              {motion.status === 'VOTING' && (
-                <Button
-                  variant="contained"
-                  onClick={() => setVotingPanelOpen(true)}
-                  startIcon={<HowToVoteIcon />}
-                  sx={{ bgcolor: '#57CC99', '&:hover': { bgcolor: '#45a87d' } }}
-                >
-                  Vote
-                </Button>
-              )}
-              {(motion.status === 'PASSED' || motion.status === 'REJECTED') && (
-                <Button
-                  variant="outlined"
-                  onClick={() => setVotingPanelOpen(true)}
-                  startIcon={<HowToVoteIcon />}
-                >
-                  View Results
                 </Button>
               )}
             </Box>

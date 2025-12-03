@@ -99,6 +99,7 @@ function CommitteePage() {
         timestamp: timestamp,
         author: "fakeauthor",
         second: false,
+        status: 'PROPOSED',
       };
       setMotions((prev) => [...prev, newMotion]);
       setOpenDialog(false);
