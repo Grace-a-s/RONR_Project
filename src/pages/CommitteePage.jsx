@@ -32,7 +32,6 @@ function CommitteePage() {
   const [committee, setCommittee] = useState(null);
   const [committeeLoading, setCommitteeLoading] = useState(true);
   const [motionsLoading, setMotionsLoading] = useState(true);
-  const [committeeError, setCommitteeError] = useState(null);
   const [motionsError, setMotionsError] = useState(null);
   const [creatingMotion, setCreatingMotion] = useState(false);
   const [membersCount, setMembersCount] = useState(0);
@@ -55,12 +54,11 @@ function CommitteePage() {
   const refreshCommittee = useCallback(async () => {
     if (!committeeId) return;
     setCommitteeLoading(true);
-    setCommitteeError(null);
     try {
       const data = await getCommittee(committeeId);
       setCommittee(data || null);
     } catch (err) {
-      setCommitteeError(err.message || 'Failed to load committee');
+      console.error('Failed to load committee', err.message);
     } finally {
       setCommitteeLoading(false);
     }
@@ -75,6 +73,7 @@ function CommitteePage() {
       const normalized = (Array.isArray(data) ? data : []).map(mapMotion);
       setMotions(normalized);
     } catch (err) {
+      console.error('Failed to load motions', err.message);
       setMotionsError(err.message || 'Failed to load motions');
     } finally {
       setMotionsLoading(false);
@@ -126,6 +125,7 @@ function CommitteePage() {
         setMotionTitle('');
         setMotionDescription('');
       } catch (err) {
+        console.error('Failed to create motion', err.message);
         setMotionsError(err.message || 'Failed to create motion');
       } finally {
         setCreatingMotion(false);
@@ -218,11 +218,6 @@ function CommitteePage() {
         </Container>
       </Box>
 
-      {committeeError && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {committeeError}
-        </Alert>
-      )}
       {membersError && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {membersError}

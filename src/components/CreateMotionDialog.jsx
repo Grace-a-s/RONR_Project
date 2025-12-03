@@ -26,7 +26,7 @@ function CreateMotionDialog({
       PaperProps={{ sx: { bgcolor: 'background.default', borderRadius: 2, overflowX: 'hidden' } }}
     >
       <DialogTitle sx={{ textAlign: 'center', py: 2 }}>
-        <Typography variant="h5" sx={{ fontWeight: 600 }}>Create Motion</Typography>
+        <Typography component="div" variant="h5" sx={{ fontWeight: 600 }}>Create Motion</Typography>
       </DialogTitle>
 
       <DialogContent sx={{ px: 3, pt: 0, overflowX: 'hidden' }}>

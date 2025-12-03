@@ -10,32 +10,32 @@ export const useMembershipsApi = (committeeId) => {
   const basePath = useMemo(() => (committeeId ? `/committees/${committeeId}` : null), [committeeId]);
 
   const listMembers = useCallback(() => {
-    requireCommitteeId(basePath);
+    requireCommitteeId(committeeId);
     return api.get(`${basePath}/member`);
-  }, [api, basePath]);
+  }, [api, basePath, committeeId]);
 
   const addMember = useCallback(
     (payload) => {
-      requireCommitteeId(basePath);
+      requireCommitteeId(committeeId);
       return api.post(`${basePath}/member`, payload);
     },
-    [api, basePath]
+    [api, basePath, committeeId]
   );
 
   const removeMember = useCallback(
     (payload) => {
-      requireCommitteeId(basePath);
+      requireCommitteeId(committeeId);
       return api.delete(`${basePath}/member`, payload);
     },
-    [api, basePath]
+    [api, basePath, committeeId]
   );
 
   const updateMemberRole = useCallback(
     (payload) => {
-      requireCommitteeId(basePath);
+      requireCommitteeId(committeeId);
       return api.patch(`${basePath}/member`, payload);
     },
-    [api, basePath]
+    [api, basePath, committeeId]
   );
 
   return {

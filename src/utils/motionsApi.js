@@ -1,9 +1,8 @@
 import { useCallback } from 'react';
 import { useApi } from './apiClient';
 
-const BASE = '/motions';
-const committeeMotionsPath = (committeeId) => `${BASE}/committees/${encodeURIComponent(committeeId)}/motions`;
-const motionPath = (motionId) => `${BASE}/motions/${encodeURIComponent(motionId)}`;
+const committeeMotionsPath = (committeeId) => `/committees/${encodeURIComponent(committeeId)}/motions`;
+const motionPath = (motionId) => `/motions/motions/${encodeURIComponent(motionId)}`;
 
 export const useMotionsApi = () => {
   const api = useApi();
