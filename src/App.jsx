@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import NavBar from './components/NavBar.jsx';
 import { Auth0ProviderWithNavigate } from "./Auth0ProviderWithNavigate.jsx";
 import CommitteePage from './pages/CommitteePage.jsx';
@@ -13,8 +13,11 @@ import CommitteeMembershipPage from './pages/CommitteeMembershipPage.jsx';
 function App() {
   const RequireAuth = ({ children }) => {
     const { isAuthenticated, isLoading } = useAuth0();
+    const location = useLocation();
     if (isLoading) return null;
-    if (!isAuthenticated) return null;
+    if (!isAuthenticated) {
+      return <AuthRedirect returnTo={`${location.pathname}${location.search}`} />;
+    }
     return children;
   };
 

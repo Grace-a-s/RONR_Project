@@ -16,7 +16,7 @@ router.post('/committees/:id/motions', async ({req, params, body}) => {
   return createMotion(user, params.id, body);
 });
 
-router.get('/committees/:id/motions', async ({req, params, body}) => {
+router.get('/committees/:id/motions', async ({req, params}) => {
   const { user, error } = await authGuard(req);
   if (error) return error;
   return getAllMotions(user, params.id);

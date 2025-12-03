@@ -4,7 +4,6 @@ import mongoose from 'mongoose';
 
 export async function createCommittee(user, body) {
     try {
-        console.log(body);
         if (!body || !body.name) {
             return new Response(JSON.stringify({ error: 'name is required' }), { status: 400, headers: { 'content-type': 'application/json' } });
         }

@@ -23,7 +23,6 @@ function LandingPage() {
   const [description, setDescription] = useState('');
   const [committees, setCommittees] = useState([]);
   const [profile, setProfile] = useState(null);
-  const [committeesError, setCommitteesError] = useState(null);
   const [loadingCommittees, setLoadingCommittees] = useState(true);
   const [savingCommittee, setSavingCommittee] = useState(false);
   const syncedUserIdRef = useRef(null);
@@ -39,13 +38,12 @@ function LandingPage() {
 
   const fetchCommittees = useCallback(async () => {
     setLoadingCommittees(true);
-    setCommitteesError(null);
     try {
       const data = await listCommittees();
       const normalized = (Array.isArray(data) ? data : []).map(normalizeCommittee);
       setCommittees(normalized);
     } catch (err) {
-      setCommitteesError(err.message || 'Failed to load committees');
+      console.error('Failed to load committees', err.message);
     } finally {
       setLoadingCommittees(false);
     }
@@ -60,7 +58,6 @@ function LandingPage() {
     const trimmedName = name.trim();
     if (!trimmedName) return;
     setSavingCommittee(true);
-    setCommitteesError(null);
     try {
       const created = await createCommittee({
         name: trimmedName,
@@ -72,7 +69,7 @@ function LandingPage() {
       setDescription('');
       setOpen(false);
     } catch (err) {
-      setCommitteesError(err.message || 'Failed to create committee');
+      console.error('Failed to create committee', err.message);
     } finally {
       setSavingCommittee(false);
     }
@@ -158,11 +155,6 @@ function LandingPage() {
       </Box>
 
       <Box>
-        {committeesError && (
-          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setCommitteesError(null)}>
-            {committeesError}
-          </Alert>
-        )}
         {loadingCommittees ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
             <CircularProgress />

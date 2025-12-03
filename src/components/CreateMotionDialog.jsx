@@ -14,7 +14,8 @@ function CreateMotionDialog({
   setMotionTitle, 
   motionDescription, 
   setMotionDescription, 
-  onSubmit 
+  onSubmit,
+  submitting = false,
 }) {
   return (
     <Dialog
@@ -72,8 +73,10 @@ function CreateMotionDialog({
       </DialogContent>
 
       <DialogActions sx={{ justifyContent: 'flex-end', px: 3, pb: 2 }}>
-        <Button onClick={onClose} variant="outlined" color="inherit">Cancel</Button>
-        <Button type="submit" form="create-motion-form" variant="contained" color="secondary">Create</Button>
+        <Button onClick={onClose} variant="outlined" color="inherit" disabled={submitting}>Cancel</Button>
+        <Button type="submit" form="create-motion-form" variant="contained" color="secondary" disabled={submitting}>
+          {submitting ? 'Creating...' : 'Create'}
+        </Button>
       </DialogActions>
     </Dialog>
   );
