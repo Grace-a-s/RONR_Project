@@ -150,8 +150,23 @@ function MotionPage() {
 
   return (
     <>
-      <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-        <Container sx={{ py: 4, flex: '1 1 auto' }}>
+      <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+        <Container sx={{ py: 4, pb: '180px', flex: '1 1 auto' }}>
+          <Box sx={{ position: 'absolute', left: 16, top: 16, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <IconButton
+              aria-label="back"
+              onClick={() => {
+                if (committeeId) navigate(`/committee/${encodeURIComponent(committeeId)}`);
+                else navigate(-1);
+              }}
+              size="large"
+            >
+              <ArrowBackIcon />
+            </IconButton>
+            <Typography variant="body2" sx={{ cursor: 'pointer' }} onClick={() => { if (committeeId) navigate(`/committee/${encodeURIComponent(committeeId)}`); else navigate(-1); }}>
+              To Motions List
+            </Typography>
+          </Box>
           <Box sx={{ display: 'flex', justifyContent: 'center' }}>
             <Paper variant="outlined" sx={{ bgcolor: '#57CC99', p: 3, maxWidth: 900, width: '100%' }}>
               <Typography variant="h5" align="center">{motion.title}</Typography>
@@ -200,8 +215,8 @@ function MotionPage() {
           )}
         </Container>
 
-        <Box component="footer" sx={{bottom: 16, left: { xs: 16, md: 24 }, right: { xs: 16, md: 24 }, zIndex: (theme) => theme.zIndex.drawer + 1 }}>
-          <Paper variant="outlined" sx={{ p: 2, display: 'flex', flexDirection: 'column', maxWidth: 'calc(100% - 48px)', margin: '0 auto' }}>
+        <Box component="footer" sx={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: (theme) => theme.zIndex.drawer + 1, py: 0 }}>
+          <Paper variant="outlined" sx={{ p: 2, display: 'flex', flexDirection: 'column', maxWidth: '900px', width: '100%', margin: '0 auto' }}>
             <TextField
               placeholder="Type here"
               value={textInput}
