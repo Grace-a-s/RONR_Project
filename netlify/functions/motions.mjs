@@ -10,19 +10,6 @@ import Motion from './model/Motion.mjs';
 
 const router = createRouter();
 
-// List all motions for a committee
-router.get('/motions/committees/:committeeId/motions', async ({req, params}) => {
-  const { user, error } = await authGuard(req);
-  if (error) return error;
-  return getAllMotions(user, params.committeeId);
-});
-
-// Create a new motion for a committee
-router.post('/motions/committees/:committeeId/motions', async ({req, params, body}) => {
-  const { user, error } = await authGuard(req, ['OWNER', 'MEMBER'], params.committeeId);
-  if (error) return error;
-  return createMotion(user, params.committeeId, body);
-});
 
 router.get('/motions/:id', async ({req, params}) => {
   const { user, error } = await authGuard(req);
