@@ -23,99 +23,100 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SendIcon from '@mui/icons-material/Send';
 import HowToVoteIcon from '@mui/icons-material/HowToVote';
 import { useAuth0 } from "@auth0/auth0-react";
-import sampleData from '../test_committee_data.json';
 import VotingPanel from '../components/VotingPanel';
 import { openVoting } from '../lib/api';
+import { useMotionsApi } from '../utils/motionsApi';
 
 function MotionPage() {
   const { committeeId, motionId } = useParams();
   const navigate = useNavigate();
 
-   // TODO: Implement role-based views of motion page
   const { user, getAccessTokenSilently } = useAuth0();
+  const { getMotion, secondMotion, getDebates, createDebate } = useMotionsApi();
 
   const [motion, setMotion] = useState(null);
+  const [debates, setDebates] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [showDebate, setShowDebate] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const [textInput, setTextInput] = useState('');
+  const [debatePosition, setDebatePosition] = useState('NEUTRAL');
   const [votingPanelOpen, setVotingPanelOpen] = useState(false);
   const [openingVote, setOpeningVote] = useState(false);
+  const [seconding, setSeconding] = useState(false);
+  const [submittingDebate, setSubmittingDebate] = useState(false);
 
+  // Fetch motion data from backend
   useEffect(() => {
-    const key = committeeId ? `motions_${committeeId}` : 'motions';
-    const storedRaw = localStorage.getItem(key);
-    if (storedRaw) {
-      const stored = JSON.parse(storedRaw);
-      const list = Array.isArray(stored) ? stored : stored.motion_list || [];
-      const found = list.find((m) => String(m.id) === String(motionId));
-      if (found) {
-        setMotion(found);
-        return;
+    const fetchMotion = async () => {
+      try {
+        setLoading(true);
+        const motionData = await getMotion(motionId);
+        setMotion(motionData);
+      } catch (error) {
+        console.error('Failed to load motion:', error);
+      } finally {
+        setLoading(false);
       }
-    }
+    };
 
-    // fallback to sample data (read-only). Map sample motion to app shape.
+    if (motionId) {
+      fetchMotion();
+    }
+  }, [motionId, getMotion]);
+
+  // Fetch debates when showDebate is toggled on
+  useEffect(() => {
+    const fetchDebates = async () => {
+      try {
+        const debatesData = await getDebates(motionId);
+        setDebates(debatesData || []);
+      } catch (error) {
+        console.error('Failed to load debates:', error);
+      }
+    };
+
+    if (showDebate && motionId) {
+      fetchDebates();
+    }
+  }, [showDebate, motionId, getDebates]);
+
+  const handleSecond = async () => {
+    if (!motion) return;
     try {
-      if (Array.isArray(sampleData)) {
-        const commit = sampleData.find((c) => String(c.id) === String(committeeId));
-        if (commit && Array.isArray(commit.motionList)) {
-          const found = commit.motionList.find((m) => String(m.id) === String(motionId));
-          if (found) {
-            const mapped = {
-              id: String(found.id),
-              title: found.name || found.title || '',
-              description: found.description || '',
-              debate_list: [],
-              timestamp: Date.now(),
-              author: found.author || '',
-              status: found.status,
-            };
-            setMotion(mapped);
-            return;
-          }
-        }
-      }
-    } catch (e) {
-      // ignore
+      setSeconding(true);
+      const updatedMotion = await secondMotion(motionId);
+      setMotion(updatedMotion);
+    } catch (error) {
+      console.error('Failed to second motion:', error);
+      alert(error.message || 'Failed to second motion.');
+    } finally {
+      setSeconding(false);
     }
-    // if not found, keep null (shows Loading...)
-  }, [committeeId, motionId]);
-
-  const updateData = (updatedMotion) => {
-    const key = committeeId ? `motions_${committeeId}` : 'motions';
-    const stored = JSON.parse(localStorage.getItem(key)) || [];
-    if (Array.isArray(stored)) {
-      const idx = stored.findIndex((m) => String(m.id) === String(motionId));
-      if (idx !== -1) stored[idx] = updatedMotion;
-      else stored.push(updatedMotion);
-      localStorage.setItem(key, JSON.stringify(stored));
-    } else {
-      const list = stored.motion_list || [];
-      const idx = list.findIndex((m) => String(m.id) === String(motionId));
-      if (idx !== -1) list[idx] = updatedMotion;
-      else list.push(updatedMotion);
-      localStorage.setItem(key, JSON.stringify({ ...stored, motion_list: list }));
-    }
-    setMotion(updatedMotion);
   };
 
-  const handleSecond = () => {
-    if (!motion) return;
-    const updatedMotion = { ...motion, second: true, status: 'DEBATE' };
-    updateData(updatedMotion);
-  };
+  const handleDebateSubmit = async () => {
+    if (!motion || !textInput.trim()) return;
+    
+    // Motion must be in DEBATE status (seconded and approved)
+    if (motion.status !== 'DEBATE') {
+      alert('Debate is only available when motion is in DEBATE status.');
+      return;
+    }
 
-  const handleDebateSubmit = () => {
-    if (!motion) return;
-    if (motion.second && textInput.trim()) {
-      // include a timestamp for nicer comment UI and potential sorting
-      const debateEntry = { content: textInput, timestamp: Date.now() };
-      const updatedMotion = {
-        ...motion,
-        debate_list: Array.isArray(motion.debate_list) ? [...motion.debate_list, debateEntry] : [debateEntry]
-      };
-      updateData(updatedMotion);
+    try {
+      setSubmittingDebate(true);
+      const newDebate = await createDebate(motionId, {
+        content: textInput,
+        position: debatePosition,
+      });
+      setDebates((prev) => [newDebate, ...prev]);
       setTextInput('');
+    } catch (error) {
+      console.error('Failed to submit debate:', error);
+      alert(error.message || 'Failed to submit debate.');
+    } finally {
+      setSubmittingDebate(false);
     }
   };
 
@@ -127,7 +128,6 @@ function MotionPage() {
       const token = await getAccessTokenSilently();
       const updatedMotion = await openVoting(motionId, token);
       setMotion(updatedMotion);
-      updateData(updatedMotion);
     } catch (error) {
       console.error('Failed to open voting:', error);
       alert(error.message || 'Failed to open voting. You may need CHAIR role.');
@@ -139,7 +139,6 @@ function MotionPage() {
   const handleVoteSuccess = (result) => {
     if (result && result.motion) {
       setMotion(result.motion);
-      updateData(result.motion);
 
       if (result.motion.status === 'PASSED' || result.motion.status === 'REJECTED') {
         setVotingPanelOpen(false);
@@ -147,7 +146,11 @@ function MotionPage() {
     }
   };
 
-  if (!motion) return <Container sx={{ py: 6 }}><Typography>Loading...</Typography></Container>;
+  // Check if motion has been seconded based on status
+  const isSeconded = motion && motion.status !== 'PROPOSED';
+
+  if (loading) return <Container sx={{ py: 6 }}><Typography>Loading...</Typography></Container>;
+  if (!motion) return <Container sx={{ py: 6 }}><Typography>Motion not found</Typography></Container>;
 
   return (
     <>
@@ -175,11 +178,15 @@ function MotionPage() {
 
               <Box sx={{ mt: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Box sx={{ display: 'flex', gap: 1 }}>
-                  <Button variant="outlined" onClick={handleSecond} disabled={!!motion.second}>
-                    {motion.second ? 'Seconded' : 'Second'}
+                  <Button 
+                    variant="outlined" 
+                    onClick={handleSecond} 
+                    disabled={isSeconded || seconding}
+                  >
+                    {seconding ? <CircularProgress size={20} /> : isSeconded ? 'Seconded' : 'Second'}
                   </Button>
 
-                  <Button variant="contained" onClick={toggleDebate} disabled={!motion.second}>
+                  <Button variant="contained" onClick={toggleDebate} disabled={!isSeconded}>
                     View Debate
                   </Button>
                 </Box>
@@ -201,15 +208,27 @@ function MotionPage() {
                 <Typography variant="subtitle1" gutterBottom>Debate</Typography>
 
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: { xs: '240px', md: '360px' }, overflow: 'auto', pr: 1, pb: { xs: '140px', md: '100px' } }}>
-                  {(Array.isArray(motion.debate_list) ? motion.debate_list : []).map((entry, i) => (
-                    <Paper key={i} variant="outlined" sx={{ p: 2, display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+                  {debates.map((entry, i) => (
+                    <Paper key={entry._id || i} variant="outlined" sx={{ p: 2, display: 'flex', gap: 2, alignItems: 'flex-start' }}>
                       <Avatar sx={{ bgcolor: (theme) => theme.palette.primary.main, width: 40, height: 40, flexShrink: 0 }}>
-                        {entry.author ? String(entry.author)[0].toUpperCase() : 'M'}
+                        {entry.authorId ? String(entry.authorId)[0].toUpperCase() : 'M'}
                       </Avatar>
 
                       <Box sx={{ flex: 1 }}>
                         <Typography variant="caption" color="text.secondary">
-                          {entry.author || 'Member'} · {entry.timestamp ? new Date(entry.timestamp).toLocaleString() : `#${i + 1}`}
+                          {entry.authorId || 'Member'} · {entry.createdAt ? new Date(entry.createdAt).toLocaleString() : `#${i + 1}`}
+                          {entry.position && (
+                            <Chip 
+                              label={entry.position} 
+                              size="small" 
+                              sx={{ ml: 1 }}
+                              color={
+                                entry.position === 'SUPPORT' ? 'success' :
+                                entry.position === 'OPPOSE' ? 'error' :
+                                'default'
+                              }
+                            />
+                          )}
                         </Typography>
 
                         <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', mt: 1 }}>
@@ -218,6 +237,9 @@ function MotionPage() {
                       </Box>
                     </Paper>
                   ))}
+                  {debates.length === 0 && (
+                    <Typography color="text.secondary" align="center">No debate entries yet.</Typography>
+                  )}
                 </Box>
               </Paper>
             </Box>
@@ -235,8 +257,26 @@ function MotionPage() {
               fullWidth
             />
 
-            <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-              <Button variant="contained" endIcon={<SendIcon />} onClick={handleDebateSubmit} disabled={!motion.second || !textInput.trim()}>
+            <Box sx={{ display: 'flex', gap: 1, mt: 1, alignItems: 'center' }}>
+              <TextField
+                select
+                size="small"
+                value={debatePosition}
+                onChange={(e) => setDebatePosition(e.target.value)}
+                sx={{ minWidth: 120 }}
+                SelectProps={{ native: true }}
+              >
+                <option value="NEUTRAL">Neutral</option>
+                <option value="SUPPORT">Support</option>
+                <option value="OPPOSE">Oppose</option>
+              </TextField>
+
+              <Button 
+                variant="contained" 
+                endIcon={submittingDebate ? <CircularProgress size={20} /> : <SendIcon />} 
+                onClick={handleDebateSubmit} 
+                disabled={motion.status !== 'DEBATE' || !textInput.trim() || submittingDebate}
+              >
                 Send
               </Button>
               {motion.status === 'DEBATE' && (
