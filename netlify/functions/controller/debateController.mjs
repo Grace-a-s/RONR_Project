@@ -38,7 +38,7 @@ export async function createDebate(user, motionId, body) {
         headers: { "content-type": "application/json" },
       });
 
-    //if (motion.status !== "DEBATE")
+    //Grace_change if (motion.status !== "DEBATE")
     //   return new Response(JSON.stringify({ error: 'motion status is not DEBATE' }), { status: 403, headers: { 'content-type': 'application/json' } });
     if (motion.status !== "SECONDED")
       return new Response(

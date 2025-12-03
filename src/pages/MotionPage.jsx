@@ -102,7 +102,7 @@ function MotionPage() {
       alert('Debate is only available when motion has been seconded.');
       return;
     }
-    // Motion must be in DEBATE status (seconded and approved)
+    //Grace_change Motion must be in DEBATE status (seconded and approved)
     //if (motion.status !== 'DEBATE') {
     //  alert('Debate is only available when motion is in DEBATE status.');
     //  return;
@@ -279,7 +279,7 @@ function MotionPage() {
                 variant="contained" 
                 endIcon={submittingDebate ? <CircularProgress size={20} /> : <SendIcon />} 
                 onClick={handleDebateSubmit} 
-                //disabled={motion.status !== 'DEBATE' || !textInput.trim() || submittingDebate}
+                //Grace_change disabled={motion.status !== 'DEBATE' || !textInput.trim() || submittingDebate}
                 disabled={motion.status !== 'SECONDED' || !textInput.trim() || submittingDebate}
 
               >
