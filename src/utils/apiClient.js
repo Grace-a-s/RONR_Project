@@ -15,7 +15,6 @@ export class APIClient {
     const token = auth && this.getAccessToken ? await this.getAccessToken() : null;
 
     const url = `${API_BASE_URL}${endpoint}`;
-    console.log("Token:", token);
     const init = {
       method,
       headers: {
@@ -25,14 +24,12 @@ export class APIClient {
       },
     };
 
-    console.log("INIT: ", init)
 
     if (body !== undefined) {
       init.body = typeof body === 'string' ? body : JSON.stringify(body);
     }
 
     const response = await fetch(url, init);
-    console.log("RESPONSE: ", response);
     return this.parseResponse(response);
   }
 
@@ -46,6 +43,7 @@ export class APIClient {
       const error = new Error(message || `HTTP ${response.status}`);
       error.status = response.status;
       error.payload = data;
+      console.error(error);
       throw error;
     }
 
