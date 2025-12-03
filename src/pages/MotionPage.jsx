@@ -98,11 +98,15 @@ function MotionPage() {
   const handleDebateSubmit = async () => {
     if (!motion || !textInput.trim()) return;
     
-    // Motion must be in DEBATE status (seconded and approved)
-    if (motion.status !== 'DEBATE') {
-      alert('Debate is only available when motion is in DEBATE status.');
+    if (motion.status !== 'SECONDED') {
+      alert('Debate is only available when motion has been seconded.');
       return;
     }
+    // Motion must be in DEBATE status (seconded and approved)
+    //if (motion.status !== 'DEBATE') {
+    //  alert('Debate is only available when motion is in DEBATE status.');
+    //  return;
+    //}
 
     try {
       setSubmittingDebate(true);
@@ -275,7 +279,9 @@ function MotionPage() {
                 variant="contained" 
                 endIcon={submittingDebate ? <CircularProgress size={20} /> : <SendIcon />} 
                 onClick={handleDebateSubmit} 
-                disabled={motion.status !== 'DEBATE' || !textInput.trim() || submittingDebate}
+                //disabled={motion.status !== 'DEBATE' || !textInput.trim() || submittingDebate}
+                disabled={motion.status !== 'SECONDED' || !textInput.trim() || submittingDebate}
+
               >
                 Send
               </Button>
