@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Container from '@mui/material/Container';
 import Box from '@mui/material/Box';
@@ -10,8 +10,10 @@ import Button from '@mui/material/Button';
 import Grid from '@mui/material/Grid';
 import AddIcon from '@mui/icons-material/Add';
 import { useAuth0 } from '@auth0/auth0-react';
-import sampleData from '../test_committee_data.json';
+import Alert from '@mui/material/Alert';
+import CircularProgress from '@mui/material/CircularProgress';
 import { useUsersApi } from '../utils/usersApi';
+import { useCommitteesApi } from '../utils/committeesApi';
 
 
 function LandingPage() {
@@ -21,55 +23,59 @@ function LandingPage() {
   const [description, setDescription] = useState('');
   const [committees, setCommittees] = useState([]);
   const [profile, setProfile] = useState(null);
-  const skipPersist = useRef(true);
+  const [committeesError, setCommitteesError] = useState(null);
+  const [loadingCommittees, setLoadingCommittees] = useState(true);
+  const [savingCommittee, setSavingCommittee] = useState(false);
   const syncedUserIdRef = useRef(null);
+  const { listCommittees, createCommittee } = useCommitteesApi();
 
-useEffect(() => {
+  const normalizeCommittee = useCallback((committee) => ({
+    id: committee?._id ? String(committee._id) : String(committee?.id || Date.now()),
+    name: committee?.name || 'Untitled Committee',
+    description: committee?.description || '',
+    members: committee?.members || committee?.memberList || [],
+    createdAt: committee?.createdAt || committee?.updatedAt || Date.now(),
+  }), []);
+
+  const fetchCommittees = useCallback(async () => {
+    setLoadingCommittees(true);
+    setCommitteesError(null);
     try {
-      const raw = localStorage.getItem('committees');
-      if (raw) {
-        setCommittees(JSON.parse(raw));
-      } else if (Array.isArray(sampleData)) {
-        const mapped = sampleData.map((c) => ({
-          id: String(c.id),
-          name: c.name || `Committee ${c.id}`,
-          description: c.description || c.description || '',
-          createdAt: Date.now(),
-          members: c.memberList || [],
-        }));
-        setCommittees(mapped);
-      }
-    } catch (e) {
-      console.warn('Failed to load committees', e);
+      const data = await listCommittees();
+      const normalized = (Array.isArray(data) ? data : []).map(normalizeCommittee);
+      setCommittees(normalized);
+    } catch (err) {
+      setCommitteesError(err.message || 'Failed to load committees');
+    } finally {
+      setLoadingCommittees(false);
     }
-  }, []);
+  }, [listCommittees, normalizeCommittee]);
 
   useEffect(() => {
-    if (skipPersist.current) {
-      skipPersist.current = false;
-      return;
-    }
-    try {
-      localStorage.setItem('committees', JSON.stringify(committees));
-    } catch (e) {
-      console.warn('Failed to save committees', e);
-    }
-  }, [committees]);
+    fetchCommittees();
+  }, [fetchCommittees]);
 
-  const handleCreate = (e) => {
+  const handleCreate = async (e) => {
     e.preventDefault();
-    if (!name.trim()) return;
-    const id = String(Date.now());
-    const newCommittee = {
-      id,
-      name: name.trim(),
-      description: description.trim(),
-      createdAt: Date.now(),
-    };
-    setCommittees((c) => [...c, newCommittee]);
-    setName('');
-    setDescription('');
-    setOpen(false);
+    const trimmedName = name.trim();
+    if (!trimmedName) return;
+    setSavingCommittee(true);
+    setCommitteesError(null);
+    try {
+      const created = await createCommittee({
+        name: trimmedName,
+        description: description.trim() || undefined,
+      });
+      const normalized = normalizeCommittee(created);
+      setCommittees((prev) => [...prev, normalized]);
+      setName('');
+      setDescription('');
+      setOpen(false);
+    } catch (err) {
+      setCommitteesError(err.message || 'Failed to create committee');
+    } finally {
+      setSavingCommittee(false);
+    }
   };
 
   const { user, isAuthenticated, isLoading } = useAuth0();
@@ -152,24 +158,46 @@ useEffect(() => {
       </Box>
 
       <Box>
-        <Typography variant="h4" component="h2" sx={{ mb: 2 }}>Your Committees</Typography>
-
-        {committees.length === 0 ? (
-          <Card sx={{ p: 4, textAlign: 'center' }}>
-            <Typography>No committees yet! Create one to get started.</Typography>
-          </Card>
+        {committeesError && (
+          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setCommitteesError(null)}>
+            {committeesError}
+          </Alert>
+        )}
+        {loadingCommittees ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
+            <CircularProgress />
+          </Box>
         ) : (
-          <Grid container spacing={3}>
-            {committees.map((c) => (
-              <Grid item xs={12} sm={6} md={4} lg={3} key={c.id}>
-                <CommitteeCard committee={c} onClick={() => openCommittee(c)} />
+          <>
+            <Typography variant="h4" component="h2" sx={{ mb: 2 }}>Your Committees</Typography>
+
+            {committees.length === 0 ? (
+              <Card sx={{ p: 4, textAlign: 'center' }}>
+                <Typography>No committees yet! Create one to get started.</Typography>
+              </Card>
+            ) : (
+              <Grid container spacing={3}>
+                {committees.map((c) => (
+                  <Grid item xs={12} sm={6} md={4} lg={3} key={c.id}>
+                    <CommitteeCard committee={c} onClick={() => openCommittee(c)} />
+                  </Grid>
+                ))}
               </Grid>
-            ))}
-          </Grid>
+            )}
+          </>
         )}
       </Box>
 
-      <CreateCommitteeDialog open={open} onClose={handleClose} name={name} setName={setName} description={description} setDescription={setDescription} onSubmit={handleCreate} />
+      <CreateCommitteeDialog
+        open={open}
+        onClose={handleClose}
+        name={name}
+        setName={setName}
+        description={description}
+        setDescription={setDescription}
+        onSubmit={handleCreate}
+        submitting={savingCommittee}
+      />
     </Container>
   );
 }

@@ -6,9 +6,9 @@ import Button from '@mui/material/Button';
 import Box from '@mui/material/Box';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
-import theme from '../theme';
+import CircularProgress from '@mui/material/CircularProgress';
 
-function CreateCommitteeDialog({ open, onClose, name, setName, description, setDescription, onSubmit }) {
+function CreateCommitteeDialog({ open, onClose, name, setName, description, setDescription, onSubmit, submitting = false }) {
   return (
     <Dialog
       open={open}
@@ -70,8 +70,17 @@ function CreateCommitteeDialog({ open, onClose, name, setName, description, setD
       </DialogContent>
 
       <DialogActions sx={{ justifyContent: 'flex-end', px: 3, pb: 2 }}>
-        <Button onClick={onClose} variant="outlined" color="inherit">Cancel</Button>
-        <Button type="submit" form="create-committee-form" variant="contained" color="secondary">Create</Button>
+        <Button onClick={onClose} variant="outlined" color="inherit" disabled={submitting}>Cancel</Button>
+        <Button
+          type="submit"
+          form="create-committee-form"
+          variant="contained"
+          color="secondary"
+          disabled={submitting}
+          startIcon={submitting ? <CircularProgress size={18} color="inherit" /> : null}
+        >
+          {submitting ? 'Creating...' : 'Create'}
+        </Button>
       </DialogActions>
     </Dialog>
   );

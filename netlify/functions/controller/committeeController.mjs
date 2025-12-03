@@ -36,12 +36,21 @@ export async function createCommittee(user, body) {
 
 export async function getAllCommittees(user, body) {
     try {
-        // const query = {};
-        // // optional filters can be read from body (e.g., ownerId)
-        // if (body && body.name) query.name = { $regex: body.name, $options: 'i' };
+        const userId = user?.sub;
+        if (!userId) {
+            return new Response(JSON.stringify({ error: 'auth0Id required' }), { status: 401, headers: { 'content-type': 'application/json' } });
+        }
 
-        // const committees = await Committee.find({query}).sort({ createdAt: -1 }).lean();
-        const committees = await Committee.find({});
+        const memberships = await Membership.find({ userId }).select('committeeId').lean();
+        const committeeIds = memberships
+            .map((membership) => membership.committeeId)
+            .filter((id) => id && mongoose.Types.ObjectId.isValid(id));
+
+        if (committeeIds.length === 0) {
+            return new Response(JSON.stringify([]), { status: 200, headers: { 'content-type': 'application/json' } });
+        }
+
+        const committees = await Committee.find({ _id: { $in: committeeIds } }).lean();
         return new Response(JSON.stringify(committees), { status: 200, headers: { 'content-type': 'application/json' } });
     } catch (err) {
         return new Response(JSON.stringify({ error: err.toString() }), { status: 400, headers: { 'content-type': 'application/json' } });
