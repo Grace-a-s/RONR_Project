@@ -3,7 +3,7 @@
 import { connectDatabase } from "./utils/db.mjs";
 import { createRouter } from './utils/router.mjs';
 import { authGuard } from './utils/guard.mjs';
-import { getUser, createUser, updateUser } from "./controller/userController.mjs";
+import { getUser, createUser, updateUser, getUserByUsername } from "./controller/userController.mjs";
 
 const router = createRouter();
 
@@ -34,6 +34,12 @@ router.post("/users/me", async ({ req, body }) => {
   
   // User doesn't exist, create them
   return createUser(user, body);
+});
+
+router.get('/users/:username', async ({ req, params }) => {
+  const { user, error } = await authGuard(req);
+  if (error) return error;
+  return getUserByUsername(user, params.username);
 });
 
 export default async function(req, context) {

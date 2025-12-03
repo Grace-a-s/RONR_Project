@@ -1,70 +1,199 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useParams } from 'react-router-dom';
 import { DataGrid } from '@mui/x-data-grid';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Alert from '@mui/material/Alert';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import PersonAddAltIcon from '@mui/icons-material/PersonAddAlt';
+import { useAuth0 } from '@auth0/auth0-react';
+import { useMembershipsApi } from '../utils/membershipsApi';
+import { useUsersApi } from '../utils/usersApi';
+
+const ROLE_OPTIONS = ['OWNER', 'CHAIR', 'MEMBER'];
+
+const formatName = (userInfo = {}) => {
+    const first = userInfo.firstName || '';
+    const last = userInfo.lastName || '';
+    const full = `${first} ${last}`.trim();
+    return full || userInfo.username || userInfo.email || userInfo._id || 'Unknown user';
+};
 
 function CommitteeMembershipPage() {
-    const initialMembers = [
-        { id: 1, name: 'Comfy', email: 'comfyemail@email.com', role: 'admin' },
-        { id: 2, name: 'Chinwe', email: 'omg@email.com', role: 'chair' },
-        { id: 3, name: 'Ellen', email: 'helen@email.com', role: 'member' },
-    ];
+    const { committeeId } = useParams();
+    const { user } = useAuth0();
+    const { listMembers, addMember, removeMember, updateMemberRole } = useMembershipsApi(committeeId);
+    const { getUserByUsername } = useUsersApi();
 
-    const [rows, setRows] = useState(initialMembers);
+    const [rows, setRows] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [isOwner, setIsOwner] = useState(false);
 
-    const handleEdit = (id) => {
-        const member = rows.find((r) => r.id === id);
-        // placeholder - open edit dialog or inline edit in future
-        // keep simple for now
-        // eslint-disable-next-line no-alert
-        alert(`Edit member: ${member?.name || id}`);
-    };
+    const mapMembers = useCallback((members = []) => (
+        members.map((membership) => {
+            const userInfo = (membership && typeof membership.userId === 'object') ? membership.userId : { _id: membership?.userId };
+            const userId = userInfo?._id || membership?.userId;
+            return {
+                id: membership?._id || `${membership?.committeeId}-${userId}`,
+                membershipId: membership?._id || null,
+                userId,
+                name: formatName(userInfo),
+                email: userInfo?.email || '—',
+                role: membership?.role || 'MEMBER',
+            };
+        })
+    ), []);
 
-    const handleRemove = (id) => {
-        // eslint-disable-next-line no-restricted-globals
-        if (window.confirm('Remove this member?')) {
-            setRows((prev) => prev.filter((r) => r.id !== id));
+    const refreshMembers = useCallback(async () => {
+        if (!committeeId) {
+            setRows([]);
+            setLoading(false);
+            return;
         }
-    };
+        setLoading(true);
+        try {
+            const data = await listMembers();
+            const normalized = mapMembers(Array.isArray(data) ? data : []);
+            setRows(normalized);
+            const currentUserId = user?.sub;
+            setIsOwner(normalized.some((member) => member.userId === currentUserId && member.role === 'OWNER'));
+        } catch (err) {
+            console.error(err.message || 'Failed to load committee members');
+        } finally {
+            setLoading(false);
+        }
+    }, [committeeId, listMembers, mapMembers, user?.sub]);
 
-    const columns = [
-        { field: 'name', headerName: 'Name', flex: 1, minWidth: 150 },
-        { field: 'email', headerName: 'Email', flex: 1, minWidth: 200 },
-        { field: 'role', headerName: 'Role', width: 120 },
-        {
-            field: 'actions',
-            headerName: '',
-            width: 100,
-            sortable: false,
-            filterable: false,
-            renderCell: (params) => (
-                <Box>
-                    <IconButton size="small" onClick={() => handleEdit(params.row.id)} aria-label="edit">
-                        <EditIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton size="small" onClick={() => handleRemove(params.row.id)} aria-label="delete">
-                        <DeleteIcon fontSize="small" />
-                    </IconButton>
-                </Box>
-            ),
-        },
-    ];
+    useEffect(() => {
+        refreshMembers();
+    }, [refreshMembers]);
+
+    const handleEdit = useCallback(async (row) => {
+        const nextRole = window.prompt('Enter new role (OWNER, CHAIR, MEMBER)', row.role);
+        if (!nextRole) return;
+        const normalizedRole = nextRole.trim().toUpperCase();
+        if (!ROLE_OPTIONS.includes(normalizedRole)) {
+            window.alert('Invalid role. Please enter OWNER, CHAIR, or MEMBER.');
+            return;
+        }
+        if (normalizedRole === row.role) return;
+        try {
+            await updateMemberRole({ userId: row.userId, role: normalizedRole });
+            await refreshMembers();
+        } catch (err) {
+            console.error(err.message || 'Failed to update role');
+        }
+    }, [refreshMembers, updateMemberRole]);
+
+    const handleRemove = useCallback(async (row) => {
+        if (!window.confirm(`Remove ${row.name} from this committee?`)) return;
+        try {
+            await removeMember({ userId: row.userId });
+            await refreshMembers();
+        } catch (err) {
+            console.error(err.message || 'Failed to remove member');
+        }
+    }, [refreshMembers, removeMember]);
+
+    const handleAddMember = useCallback(async () => {
+        const usernameInput = window.prompt('Enter the username to add to this committee');
+        if (!usernameInput) return;
+        const trimmedUsername = usernameInput.trim();
+        if (!trimmedUsername) return;
+
+        let userRecord;
+        try {
+            userRecord = await getUserByUsername(trimmedUsername);
+        } catch (err) {
+            console.error(err?.message || 'Failed to look up user by username');
+            window.alert(msg);
+            return;
+        }
+
+        if (!userRecord || !userRecord._id) {
+            window.alert('User not found or missing identifier.');
+            return;
+        }
+
+        const roleInput = window.prompt('Enter role for this member (OWNER, CHAIR, MEMBER)', 'MEMBER');
+        if (!roleInput) return;
+        const normalizedRole = roleInput.trim().toUpperCase();
+        if (!ROLE_OPTIONS.includes(normalizedRole)) {
+            window.alert('Invalid role. Please enter OWNER, CHAIR, or MEMBER.');
+            return;
+        }
+
+        try {
+            await addMember({ userId: userRecord._id, role: normalizedRole });
+            await refreshMembers();
+        } catch (err) {
+            console.error(err.message || 'Failed to add member');
+        }
+    }, [addMember, getUserByUsername, refreshMembers]);
+
+    const columns = useMemo(() => {
+        const baseColumns = [
+            { field: 'name', headerName: 'Name', flex: 1, minWidth: 150 },
+            { field: 'email', headerName: 'Email', flex: 1, minWidth: 200 },
+            {
+                field: 'role',
+                headerName: 'Role',
+                width: 140,
+                valueFormatter: ({ value }) => (value ? value.toUpperCase() : 'MEMBER'),
+            },
+        ];
+
+        if (!isOwner) 
+            return baseColumns;
+
+        return [
+            ...baseColumns,
+            {
+                field: 'actions',
+                headerName: 'Actions',
+                width: 120,
+                sortable: false,
+                filterable: false,
+                disableColumnMenu: true,
+                renderCell: (params) => (
+                    <Box>
+                        <IconButton size="small" onClick={() => handleEdit(params.row)} aria-label="edit role">
+                            <EditIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton size="small" onClick={() => handleRemove(params.row)} aria-label="remove member">
+                            <DeleteIcon fontSize="small" />
+                        </IconButton>
+                    </Box>
+                ),
+            },
+        ];
+    }, [handleEdit, handleRemove, isOwner]);
 
     return (
-        <Paper sx={{ m: 5, p: 2 }}>
-            <Typography variant="h5" sx={{ mb: 2 }}>Membership</Typography>
+        <Paper sx={{ m: 5, p: 3 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 2 }}>
+                <Typography variant="h5">Membership</Typography>
+                {isOwner && (
+                    <Button variant="contained" startIcon={<PersonAddAltIcon />} onClick={handleAddMember}>
+                        Add Member
+                    </Button>
+                )}
+            </Box>
+
             <div style={{ width: '100%' }}>
-                <div style={{ height: 360, width: '100%' }}>
+                <div style={{ height: 400, width: '100%' }}>
                     <DataGrid
                         rows={rows}
                         columns={columns}
                         sx={{ border: 0 }}
-                        disableSelectionOnClick
+                        loading={loading}
+                        disableRowSelectionOnClick
                         pageSizeOptions={[5, 10]}
+                        initialState={{ pagination: { paginationModel: { pageSize: 5 } } }}
                     />
                 </div>
             </div>

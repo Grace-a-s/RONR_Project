@@ -5,10 +5,25 @@ import { createRouter } from './utils/router.mjs';
 import { authGuard } from './utils/guard.mjs';
 import { createCommittee, getAllCommittees, getCommitteeById, updateCommitteeById } from "./controller/committeeController.mjs";
 import { getMembers, addMember, removeMember, changeRole } from "./controller/membershipController.mjs";
+import { createMotion, getAllMotions } from './controller/motionController.mjs';
 
 const router = createRouter();
 
 // Define and add routes to router
+// List all motions for a committee
+router.get('/committees/:committeeId/motions', async ({req, params}) => {
+  const { user, error } = await authGuard(req);
+  if (error) return error;
+  return getAllMotions(user, params.committeeId);
+});
+
+// Create a new motion for a committee
+router.post('/committees/:committeeId/motions', async ({req, params, body}) => {
+  const { user, error } = await authGuard(req, ['OWNER', 'MEMBER'], params.committeeId);
+  if (error) return error;
+  return createMotion(user, params.committeeId, body);
+});
+
 router.get("/committees", async ({ req, body }) => {
   const { user, error } = await authGuard(req);
   if (error) return error;
@@ -60,6 +75,19 @@ router.patch('/committees/:id/member', async ({req, params, body}) => {
   if (error) return error;
   return changeRole(user, params.id, body);
 });
+
+router.post('/committees/:id/motions', async ({req, params, body}) => {
+  const { user, error } = await authGuard(req);
+  if (error) return error;
+  return createMotion(user, params.id, body);
+});
+
+router.get('/committees/:id/motions', async ({req, params}) => {
+  const { user, error } = await authGuard(req);
+  if (error) return error;
+  return getAllMotions(user, params.id);
+});
+
 
 export default async function(req, context) {
   await connectDatabase();

@@ -1,5 +1,6 @@
 import Membership from '../model/Membership.mjs';
 import Committee from '../model/Committee.mjs';
+import '../model/User.mjs';
 import mongoose from 'mongoose';
 
 export async function getMembers(user, committeeId) {
