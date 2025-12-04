@@ -51,8 +51,9 @@ function MotionPage() {
     try {
       if (Array.isArray(sampleData)) {
         const commit = sampleData.find((c) => String(c.id) === String(committeeId));
-        if (commit && Array.isArray(commit.motionList)) {
-          const found = commit.motionList.find((m) => String(m.id) === String(motionId));
+        const motionList = commit?.motionList || commit?.motions || [];
+        if (commit && Array.isArray(motionList)) {
+          const found = motionList.find((m) => String(m.id) === String(motionId));
           if (found) {
             const mapped = {
               id: String(found.id),
