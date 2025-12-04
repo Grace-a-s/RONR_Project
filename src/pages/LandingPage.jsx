@@ -33,6 +33,8 @@ function LandingPage() {
     name: committee?.name || 'Untitled Committee',
     description: committee?.description || '',
     members: committee?.members || committee?.memberList || [],
+    membersCount: committee?.membersCount ?? 0,
+    motionsCount: committee?.motionsCount ?? 0,
     createdAt: committee?.createdAt || committee?.updatedAt || Date.now(),
   }), []);
 
