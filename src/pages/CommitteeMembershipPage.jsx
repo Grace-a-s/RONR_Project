@@ -32,6 +32,7 @@ function CommitteeMembershipPage() {
     const [rows, setRows] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isOwner, setIsOwner] = useState(false);
+    const [hasChair, setHasChair] = useState(true);
 
     const mapMembers = useCallback((members = []) => (
         members.map((membership) => {
@@ -61,6 +62,7 @@ function CommitteeMembershipPage() {
             setRows(normalized);
             const currentUserId = user?.sub;
             setIsOwner(normalized.some((member) => member.userId === currentUserId && member.role === 'OWNER'));
+            setHasChair(normalized.some((member) => member.role === 'CHAIR'));
         } catch (err) {
             console.error(err.message || 'Failed to load committee members');
         } finally {
@@ -143,7 +145,6 @@ function CommitteeMembershipPage() {
                 field: 'role',
                 headerName: 'Role',
                 width: 140,
-                valueFormatter: ({ value }) => (value ? value.toUpperCase() : 'MEMBER'),
             },
         ];
 
@@ -175,6 +176,11 @@ function CommitteeMembershipPage() {
 
     return (
         <Paper sx={{ m: 5, p: 3 }}>
+            {!loading && !hasChair && (
+                <Alert severity="warning" sx={{ mb: 2 }}>
+                    WARNING: This committee currently doesn't have a presiding chair
+                </Alert>
+            )}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 2 }}>
                 <Typography variant="h5">Membership</Typography>
                 {isOwner && (
