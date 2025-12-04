@@ -52,7 +52,7 @@ function NavBar() {
                     </Tooltip>
                     
                     <Typography variant="h6" component="div" sx={{ flexGrow: 1, textAlign: 'center', color: '#fff' }}>
-                        Robert's Rules of Order
+                        Bob's Rules
                     </Typography>
 
                     <Tooltip title="Account settings">

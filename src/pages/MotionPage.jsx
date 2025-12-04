@@ -145,23 +145,33 @@ function MotionPage() {
                 <Typography variant="subtitle1" gutterBottom>Debate</Typography>
 
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: { xs: '240px', md: '360px' }, overflow: 'auto', pr: 1, pb: { xs: '140px', md: '100px' } }}>
-                  {(Array.isArray(motion.debate_list) ? motion.debate_list : []).map((entry, i) => (
-                    <Paper key={i} variant="outlined" sx={{ p: 2, display: 'flex', gap: 2, alignItems: 'flex-start' }}>
-                      <Avatar sx={{ bgcolor: (theme) => theme.palette.primary.main, width: 40, height: 40, flexShrink: 0 }}>
-                        {entry.author ? String(entry.author)[0].toUpperCase() : 'M'}
-                      </Avatar>
+                  {(Array.isArray(motion.debate_list) ? motion.debate_list : []).map((entry, i) => {
+                    // Handle both old format (author as string/ID) and new format (authorId as populated object)
+                    const authorData = entry.authorId || entry.author;
+                    const username = (typeof authorData === 'object' && authorData?.username)
+                      ? authorData.username
+                      : (typeof authorData === 'string' ? authorData : 'Member');
+                    const displayName = username || 'Member';
+                    const avatarLetter = displayName[0].toUpperCase();
 
-                      <Box sx={{ flex: 1 }}>
-                        <Typography variant="caption" color="text.secondary">
-                          {entry.author || 'Member'} · {entry.timestamp ? new Date(entry.timestamp).toLocaleString() : `#${i + 1}`}
-                        </Typography>
+                    return (
+                      <Paper key={i} variant="outlined" sx={{ p: 2, display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+                        <Avatar sx={{ bgcolor: (theme) => theme.palette.primary.main, width: 40, height: 40, flexShrink: 0 }}>
+                          {avatarLetter}
+                        </Avatar>
 
-                        <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', mt: 1 }}>
-                          {entry.content}
-                        </Typography>
-                      </Box>
-                    </Paper>
-                  ))}
+                        <Box sx={{ flex: 1 }}>
+                          <Typography variant="caption" color="text.secondary">
+                            {displayName} · {entry.timestamp || entry.createdAt ? new Date(entry.timestamp || entry.createdAt).toLocaleString() : `#${i + 1}`}
+                          </Typography>
+
+                          <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', mt: 1 }}>
+                            {entry.content}
+                          </Typography>
+                        </Box>
+                      </Paper>
+                    );
+                  })}
                 </Box>
               </Paper>
             </Box>

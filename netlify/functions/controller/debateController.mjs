@@ -40,7 +40,9 @@ export async function getAllDebates(user, motionId) {
 			return new Response(JSON.stringify({ error: 'Invalid motionId' }), { status: 400, headers: { 'content-type': 'application/json' } });
 		}
 
-		const debates = await Debate.find({ motionId }).sort({ createdAt: -1 });
+		const debates = await Debate.find({ motionId })
+			.populate('authorId', 'username email firstName lastName')
+			.sort({ createdAt: -1 });
 		return new Response(JSON.stringify(debates), { status: 200, headers: { 'content-type': 'application/json' } });
 	} catch (err) {
 		return new Response(JSON.stringify({ error: err.toString() }), { status: 400, headers: { 'content-type': 'application/json' } });
