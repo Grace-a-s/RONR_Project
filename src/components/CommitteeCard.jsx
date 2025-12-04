@@ -9,8 +9,8 @@ import PeopleIcon from '@mui/icons-material/People';
 import GavelIcon from '@mui/icons-material/Gavel';
 
 function CommitteeCard({ committee = {}, onClick }) {
-  const membersCount = committee.members?.length ?? 3;
-  const motionsCount = committee.motions?.length ?? 5;
+  const membersCount = committee.membersCount ?? 0;
+  const motionsCount = committee.motionsCount ?? 0;
 
     return (
     <Card

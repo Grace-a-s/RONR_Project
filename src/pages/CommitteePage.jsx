@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Container from '@mui/material/Container';
 import Box from '@mui/material/Box';
-import Card from "@mui/material/Card";
 import Typography from '@mui/material/Typography';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
@@ -14,10 +13,13 @@ import Button from '@mui/material/Button';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SearchIcon from '@mui/icons-material/Search';
 import FilterAltIcon from '@mui/icons-material/FilterAlt';
-import CreateMotionCard from '../components/CreateMotionCard';
 import CreateMotionDialog from '../components/CreateMotionDialog';
 import MotionDetailsCard from '../components/MotionDetailsCard';
-import sampleData from '../test_committee_data.json';
+import CircularProgress from '@mui/material/CircularProgress';
+import Alert from '@mui/material/Alert';
+import { useCommitteesApi } from '../utils/committeesApi';
+import { useMotionsApi } from '../utils/motionsApi';
+import { useMembershipsApi } from '../utils/membershipsApi';
 
 function CommitteePage() {
   const navigate = useNavigate();
@@ -27,84 +29,108 @@ function CommitteePage() {
   const [motionDescription, setMotionDescription] = useState('');
   const [motions, setMotions] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const initialPersistSkip = useRef(true);
-  // key for per-committee motions in localStorage
-  const storageKey = committeeId ? `motions_${committeeId}` : 'motions';
   const [committee, setCommittee] = useState(null);
-  const skipPersist = useRef(true);
+  const [committeeLoading, setCommitteeLoading] = useState(true);
+  const [motionsLoading, setMotionsLoading] = useState(true);
+  const [motionsError, setMotionsError] = useState(null);
+  const [creatingMotion, setCreatingMotion] = useState(false);
+  const [membersCount, setMembersCount] = useState(0);
+  const [membersLoading, setMembersLoading] = useState(true);
+  const [membersError, setMembersError] = useState(null);
+  const { getCommittee } = useCommitteesApi();
+  const { listMotions, createMotion } = useMotionsApi();
+  const { listMembers } = useMembershipsApi(committeeId);
 
- // load saved motions for this committee from localStorage on mount
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(storageKey);
-      if (saved) {
-        setMotions(JSON.parse(saved));
-      } else if (Array.isArray(sampleData)) {
-        // find committee in sample data and map motions to app shape
-        const found = sampleData.find((c) => String(c.id) === String(committeeId));
-        if (found && Array.isArray(found.motionList)) {
-          const mapped = found.motionList.map((m) => ({
-            id: String(m.id),
-            title: m.name || m.title || '',
-            description: m.description || '',
-            debate_list: [],
-            timestamp: Date.now(),
-            author: m.author || '',
-            second: m.status === 'SECOND' || m.status === 'SECONDING',
-          }));
-          setMotions(mapped);
-        }
-      }
-    } catch (e) {
-      console.warn('Failed to parse saved motions', e);
-    }
-  }, [storageKey]);
+  const mapMotion = useCallback((motion = {}) => ({
+    id: String(motion._id),
+    title: motion.title || '',
+    description: motion.description || '',
+    timestamp: motion.createdAt || motion.updatedAt || Date.now(),
+    author: motion.authorId || 'Unknown',
+    status: motion.status || 'PROPOSED',
+    second: motion.status ? ['SECONDED', 'DEBATE', 'VOTING', 'PASSED'].includes(motion.status) : false,
+  }), []);
 
-  // load committee metadata (name, description, members) from stored committees
-  useEffect(() => {
+  const refreshCommittee = useCallback(async () => {
+    if (!committeeId) return;
+    setCommitteeLoading(true);
     try {
-      const raw = localStorage.getItem('committees');
-      if (!raw) return;
-      const list = JSON.parse(raw);
-      const found = list.find((c) => String(c.id) === String(committeeId));
-      if (found) setCommittee(found);
+      const data = await getCommittee(committeeId);
+      setCommittee(data || null);
     } catch (err) {
-      // ignore
+      console.error('Failed to load committee', err.message);
+    } finally {
+      setCommitteeLoading(false);
     }
-  }, [committeeId]);
+  }, [committeeId, getCommittee]);
 
-  // persist motions for this committee
-  useEffect(() => {
-    if (initialPersistSkip.current) {
-      initialPersistSkip.current = false;
-      return;
-    }
+  const refreshMotions = useCallback(async () => {
+    if (!committeeId) return;
+    setMotionsLoading(true);
+    setMotionsError(null);
     try {
-      localStorage.setItem(storageKey, JSON.stringify(motions));
-    } catch (e) {
-      console.warn('Failed to save motions', e);
+      const data = await listMotions(committeeId);
+      const normalized = (Array.isArray(data) ? data : []).map(mapMotion);
+      setMotions(normalized);
+    } catch (err) {
+      console.error('Failed to load motions', err.message);
+      setMotionsError(err.message || 'Failed to load motions');
+    } finally {
+      setMotionsLoading(false);
     }
-  }, [motions, storageKey]);
+  }, [committeeId, listMotions, mapMotion]);
+
+  useEffect(() => {
+    refreshCommittee();
+  }, [refreshCommittee]);
+
+  useEffect(() => {
+    refreshMotions();
+  }, [refreshMotions]);
+
+  const refreshMembersCount = useCallback(async () => {
+    if (!committeeId) return;
+    setMembersLoading(true);
+    setMembersError(null);
+    try {
+      const data = await listMembers();
+      setMembersCount(Array.isArray(data) ? data.length : 0);
+    } catch (err) {
+      setMembersError(err.message || 'Failed to load committee members');
+      setMembersCount(0);
+    } finally {
+      setMembersLoading(false);
+    }
+  }, [committeeId, listMembers]);
+
+  useEffect(() => {
+    refreshMembersCount();
+  }, [refreshMembersCount]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (motionTitle && motionDescription) {
-      const timestamp = Date.now();
-
-      const newMotion = {
-        id: String(Date.now()) + Math.floor(Math.random() * 1000),
-        title: motionTitle,
-        description: motionDescription,
-        debate_list: [],
-        timestamp: timestamp,
-        author: "fakeauthor",
-        second: false,
-      };
-      setMotions((prev) => [...prev, newMotion]);
-      setOpenDialog(false);
-      setMotionTitle('');
-      setMotionDescription('');
-    }
+    const trimmedTitle = motionTitle.trim();
+    const trimmedDescription = motionDescription.trim();
+    if (!trimmedTitle || !trimmedDescription || !committeeId) return;
+    setCreatingMotion(true);
+    setMotionsError(null);
+    (async () => {
+      try {
+        const created = await createMotion(committeeId, {
+          title: trimmedTitle,
+          description: trimmedDescription,
+        });
+        setMotions((prev) => [mapMotion(created), ...prev]);
+        setOpenDialog(false);
+        setMotionTitle('');
+        setMotionDescription('');
+      } catch (err) {
+        console.error('Failed to create motion', err.message);
+        setMotionsError(err.message || 'Failed to create motion');
+      } finally {
+        setCreatingMotion(false);
+      }
+    })();
   };
 
   const handleOpenCreate = () => setOpenDialog(true);
@@ -115,8 +141,18 @@ function CommitteePage() {
   };
 
 
-  const membersCount = committee?.members?.length ?? 3;
   const motionsCount = motions.length;
+  const bannerLoading = committeeLoading || membersLoading;
+
+  const filteredMotions = useMemo(() => {
+    if (!searchQuery.trim()) return motions;
+    const lowered = searchQuery.trim().toLowerCase();
+    return motions.filter((motion) => {
+      const title = (motion.title || '').toLowerCase();
+      const description = (motion.description || '').toLowerCase();
+      return title.includes(lowered) || description.includes(lowered);
+    });
+  }, [motions, searchQuery]);
 
   return (
     <Container maxWidth="xl" sx={{ marginTop: 4 }}>
@@ -136,20 +172,31 @@ function CommitteePage() {
         <Container maxWidth="xl">
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
             <Box sx={{ minWidth: 0 }}>
-              <Typography variant="h5" sx={{ fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{committee?.name || `Committee ${committeeId}`}</Typography>
-              <Typography variant="body2" sx={{ mt: 1, color: 'rgba(255,255,255,0.9)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{committee?.description || 'Committee description goes here.'}</Typography>
+              {bannerLoading ? (
+                <Stack direction="row" spacing={2} alignItems="center">
+                  <CircularProgress color="inherit" size={24} thickness={4} />
+                  <Typography variant="body2">Loading committee details…</Typography>
+                </Stack>
+              ) : (
+                <>
+                  <Typography variant="h5" sx={{ fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{committee?.name || `Committee ${committeeId}`}</Typography>
+                  <Typography variant="body2" sx={{ mt: 1, color: 'rgba(255,255,255,0.9)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                    {committee?.description || 'Committee description goes here.'}
+                  </Typography>
 
-              <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <PeopleIcon />
-                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.95)' }}>Members • {membersCount}</Typography>
-                </Box>
+                  <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <PeopleIcon />
+                      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.95)' }}>Members • {membersCount}</Typography>
+                    </Box>
 
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <GavelIcon />
-                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.95)' }}>Active motions • {motionsCount}</Typography>
-                </Box>
-              </Stack>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <GavelIcon />
+                      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.95)' }}>Active motions • {motionsCount}</Typography>
+                    </Box>
+                  </Stack>
+                </>
+              )}
             </Box>
 
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -171,6 +218,17 @@ function CommitteePage() {
         </Container>
       </Box>
 
+      {membersError && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {membersError}
+        </Alert>
+      )}
+      {motionsError && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {motionsError}
+        </Alert>
+      )}
+
       
       <Box
         sx={{
@@ -184,6 +242,8 @@ function CommitteePage() {
             size="small"
             placeholder="Search motions by title or description"
             sx={{ width: { xs: '100%', sm: 400}, backgroundColor: 'white', borderRadius: '10px' }}
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
             slotProps={{
               input: {
                 startAdornment: (
@@ -231,11 +291,19 @@ function CommitteePage() {
             justifyItems: 'center',
           }}
         >
-          {motions.length === 0 ? (
-              <Typography>No motions yet! Be the first to propose!</Typography>
+          {motionsLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
+              <CircularProgress />
+            </Box>
+          ) : filteredMotions.length === 0 ? (
+              <Typography>
+                {searchQuery.trim()
+                  ? 'No motions match your search.'
+                  : 'No motions yet! Be the first to propose!'}
+              </Typography>
           ) : (
-            motions.map((motion) => (
-                <MotionDetailsCard motion={motion} onClick={() => handleCardClick(motion)} />
+            filteredMotions.map((motion) => (
+                <MotionDetailsCard key={motion.id} motion={motion} onClick={() => handleCardClick(motion)} />
             ))
           )}
         </Box>
@@ -248,6 +316,7 @@ function CommitteePage() {
         motionDescription={motionDescription}
         setMotionDescription={setMotionDescription}
         onSubmit={handleSubmit}
+        submitting={creatingMotion}
       />
     </Container>
   );

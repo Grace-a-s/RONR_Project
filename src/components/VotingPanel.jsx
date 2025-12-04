@@ -42,17 +42,26 @@ function VotingPanel({ open, onClose, motion, onVoteSuccess }) {
     try {
       setLoading(true);
       const token = await getAccessTokenSilently();
-      const votesData = await getVotes(motion.id, token);
-      setVotes(votesData);
+      const votesData = await getVotes(motion._id, token);
 
-      const support = votesData.filter(v => v.position === 'SUPPORT').length;
-      const oppose = votesData.filter(v => v.position === 'OPPOSE').length;
+      // Ensure votesData is an array
+      const validVotes = Array.isArray(votesData) ? votesData : [];
+      setVotes(validVotes);
+
+      const support = validVotes.filter(v => v.position === 'SUPPORT').length;
+      const oppose = validVotes.filter(v => v.position === 'OPPOSE').length;
       setSupportCount(support);
       setOpposeCount(oppose);
 
-      const myVote = votesData.find(v => v.authorId === user.sub);
+      const myVote = validVotes.find(v => v.authorId === user.sub);
       setUserVote(myVote);
     } catch (error) {
+      // On error, reset to empty state
+      setVotes([]);
+      setSupportCount(0);
+      setOpposeCount(0);
+      setUserVote(null);
+      console.error('Failed to fetch votes:', error);
       setSnackbar({ open: true, message: error.message || 'Failed to fetch votes', severity: 'error' });
     } finally {
       setLoading(false);
@@ -73,7 +82,7 @@ function VotingPanel({ open, onClose, motion, onVoteSuccess }) {
     try {
       setLoading(true);
       const token = await getAccessTokenSilently();
-      const result = await castVote(motion.id, position, token);
+      const result = await castVote(motion._id, position, token);
 
       setSnackbar({ open: true, message: `Vote cast: ${position}`, severity: 'success' });
 
@@ -131,7 +140,7 @@ function VotingPanel({ open, onClose, motion, onVoteSuccess }) {
                   Support
                 </Typography>
                 <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                  {supportCount} / {threshold} (2/3)
+                  {supportCount} ({totalMembers > 0 ? Math.round((supportCount / totalMembers) * 100) : 0}%)
                 </Typography>
               </Box>
               <LinearProgress
@@ -154,7 +163,7 @@ function VotingPanel({ open, onClose, motion, onVoteSuccess }) {
                   Oppose
                 </Typography>
                 <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                  {opposeCount} / {threshold} (2/3)
+                  {opposeCount} ({totalMembers > 0 ? Math.round((opposeCount / totalMembers) * 100) : 0}%)
                 </Typography>
               </Box>
               <LinearProgress
@@ -172,7 +181,7 @@ function VotingPanel({ open, onClose, motion, onVoteSuccess }) {
             </Box>
 
             <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block' }}>
-              Total committee members: {totalMembers}
+              Total members: {totalMembers} • Need {threshold} votes (2/3) to pass
             </Typography>
           </Box>
 

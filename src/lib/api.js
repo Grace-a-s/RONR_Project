@@ -63,6 +63,19 @@ export async function openVoting(motionId, token) {
   });
 }
 
+export async function chairApproveMotion(motionId, action, token) {
+  // action should be "APPROVE" or "VETO"
+  const url = `/.netlify/functions/motions/${motionId}/chair/approve`;
+  return fetchJson(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ action }),
+  });
+}
+
 export async function getCommitteeMemberCount(committeeId, token) {
   const url = `/.netlify/functions/committees/${committeeId}/memberships`;
   return fetchJson(url, {

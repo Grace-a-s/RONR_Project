@@ -1,10 +1,10 @@
 import Committee from "../model/Committee.mjs";
 import Membership from "../model/Membership.mjs";
+import Motion from "../model/Motion.mjs";
 import mongoose from 'mongoose';
 
 export async function createCommittee(user, body) {
     try {
-        console.log(body);
         if (!body || !body.name) {
             return new Response(JSON.stringify({ error: 'name is required' }), { status: 400, headers: { 'content-type': 'application/json' } });
         }
@@ -36,13 +36,52 @@ export async function createCommittee(user, body) {
 
 export async function getAllCommittees(user, body) {
     try {
-        // const query = {};
-        // // optional filters can be read from body (e.g., ownerId)
-        // if (body && body.name) query.name = { $regex: body.name, $options: 'i' };
+        const userId = user?.sub;
+        if (!userId) {
+            return new Response(JSON.stringify({ error: 'auth0Id required' }), { status: 401, headers: { 'content-type': 'application/json' } });
+        }
 
-        // const committees = await Committee.find({query}).sort({ createdAt: -1 }).lean();
-        const committees = await Committee.find({});
-        return new Response(JSON.stringify(committees), { status: 200, headers: { 'content-type': 'application/json' } });
+        const memberships = await Membership.find({ userId }).select('committeeId').lean();
+        const committeeIds = memberships
+            .map((membership) => membership.committeeId)
+            .filter((id) => id && mongoose.Types.ObjectId.isValid(id));
+
+        if (committeeIds.length === 0) {
+            return new Response(JSON.stringify([]), { status: 200, headers: { 'content-type': 'application/json' } });
+        }
+
+        const committees = await Committee.find({ _id: { $in: committeeIds } }).lean();
+
+        // Get member counts for each committee
+        const memberCounts = await Membership.aggregate([
+            { $match: { committeeId: { $in: committeeIds.map(id => new mongoose.Types.ObjectId(id)) } } },
+            { $group: { _id: '$committeeId', count: { $sum: 1 } } }
+        ]);
+        const memberCountMap = Object.fromEntries(
+            memberCounts.map(({ _id, count }) => [_id.toString(), count])
+        );
+
+        // Get motion counts for each committee (only active motions, not PASSED/REJECTED)
+        const motionCounts = await Motion.aggregate([
+            { 
+                $match: { 
+                    committeeId: { $in: committeeIds.map(id => new mongoose.Types.ObjectId(id)) },
+                } 
+            },
+            { $group: { _id: '$committeeId', count: { $sum: 1 } } }
+        ]);
+        const motionCountMap = Object.fromEntries(
+            motionCounts.map(({ _id, count }) => [_id.toString(), count])
+        );
+
+        // Add counts to each committee
+        const committeesWithCounts = committees.map(committee => ({
+            ...committee,
+            membersCount: memberCountMap[committee._id.toString()] || 0,
+            motionsCount: motionCountMap[committee._id.toString()] || 0
+        }));
+
+        return new Response(JSON.stringify(committeesWithCounts), { status: 200, headers: { 'content-type': 'application/json' } });
     } catch (err) {
         return new Response(JSON.stringify({ error: err.toString() }), { status: 400, headers: { 'content-type': 'application/json' } });
     }
