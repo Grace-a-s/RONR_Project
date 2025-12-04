@@ -22,10 +22,12 @@ import Chip from '@mui/material/Chip';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SendIcon from '@mui/icons-material/Send';
 import HowToVoteIcon from '@mui/icons-material/HowToVote';
+import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty';
 import { useAuth0 } from "@auth0/auth0-react";
 import VotingPanel from '../components/VotingPanel';
-import { openVoting } from '../lib/api';
+import { openVoting, chairApproveMotion } from '../lib/api';
 import { useMotionsApi } from '../utils/motionsApi';
+import { useMembershipsApi } from '../utils/membershipsApi';
 
 function MotionPage() {
   const { committeeId, motionId } = useParams();
@@ -33,8 +35,11 @@ function MotionPage() {
 
   const { user, getAccessTokenSilently } = useAuth0();
   const { getMotion, secondMotion, getDebates, createDebate } = useMotionsApi();
+  const { listMembers } = useMembershipsApi(committeeId);
 
   const [motion, setMotion] = useState(null);
+  const [userRole, setUserRole] = useState(null);
+  const [approvingMotion, setApprovingMotion] = useState(false);
   const [debates, setDebates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showDebate, setShowDebate] = useState(false);
@@ -64,6 +69,28 @@ function MotionPage() {
       fetchMotion();
     }
   }, [motionId, getMotion]);
+
+  // Fetch user's role in the committee
+  useEffect(() => {
+    const fetchUserRole = async () => {
+      if (!committeeId || !user?.sub) return;
+      try {
+        const members = await listMembers();
+        console.log("MEMBERS", members);
+        // userId may be populated as an object or be a string
+        const currentUser = members.find(member => {
+          const memberId = typeof member.userId === 'object' ? member.userId._id : member.userId;
+          return memberId === user.sub;
+        });
+        console.log("USER", currentUser);
+        setUserRole(currentUser?.role || null);
+      } catch (error) {
+        console.error('Failed to load user role:', error);
+      }
+    };
+
+    fetchUserRole();
+  }, [committeeId, user?.sub, listMembers]);
 
   // Fetch debates when showDebate is toggled on
   useEffect(() => {
@@ -122,6 +149,20 @@ function MotionPage() {
 
   const toggleDebate = () => setShowDebate((s) => !s);
 
+  const handleChairApprove = async (action) => {
+    try {
+      setApprovingMotion(true);
+      const token = await getAccessTokenSilently();
+      const updatedMotion = await chairApproveMotion(motionId, action, token);
+      setMotion(updatedMotion);
+    } catch (error) {
+      console.error(`Failed to ${action.toLowerCase()} motion:`, error);
+      alert(error.message || `Failed to ${action.toLowerCase()} motion. You may need CHAIR role.`);
+    } finally {
+      setApprovingMotion(false);
+    }
+  };
+
   const handleProposeVote = async () => {
     try {
       setOpeningVote(true);
@@ -148,7 +189,12 @@ function MotionPage() {
 
   // Check if motion has been seconded based on status
   const isSeconded = motion && motion.status !== 'PROPOSED';
-
+  const isChair = userRole === 'CHAIR';
+  const isSecondedStatus = motion && motion.status === 'SECONDED';
+  const isDebateStatus = motion && motion.status === 'DEBATE';
+  const isDebateOrLater = motion && ['DEBATE', 'VOTING', 'PASSED', 'REJECTED'].includes(motion.status);
+  const isVotingOrLater = motion && ['VOTING', 'PASSED', 'REJECTED'].includes(motion.status);
+console.log("CHAIR", isChair);
   if (loading) return <Container sx={{ py: 6 }}><Typography>Loading...</Typography></Container>;
   if (!motion) return <Container sx={{ py: 6 }}><Typography>Motion not found</Typography></Container>;
 
@@ -177,27 +223,69 @@ function MotionPage() {
               </Box>
 
               <Box sx={{ mt: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                  <Button 
-                    variant="outlined" 
-                    onClick={handleSecond} 
-                    disabled={isSeconded || seconding}
-                  >
-                    {seconding ? <CircularProgress size={20} /> : isSeconded ? 'Seconded' : 'Second'}
-                  </Button>
+                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                  {/* Chair sees Approve/Veto when motion is SECONDED */}
+                  {isChair && isSecondedStatus ? (
+                    <>
+                      <Button
+                        variant="contained"
+                        color="success"
+                        onClick={() => handleChairApprove('APPROVE')}
+                        disabled={approvingMotion}
+                      >
+                        {approvingMotion ? <CircularProgress size={20} /> : 'Approve'}
+                      </Button>
+                      <Button
+                        variant="contained"
+                        color="error"
+                        onClick={() => handleChairApprove('VETO')}
+                        disabled={approvingMotion}
+                      >
+                        {approvingMotion ? <CircularProgress size={20} /> : 'Deny'}
+                      </Button>
+                    </>
+                  ) : !isChair && isSecondedStatus ? (
+                    /* Non-chair users see waiting banner when motion is SECONDED */
+                    <Chip
+                      icon={<HourglassEmptyIcon sx={{ color: 'white !important' }} />}
+                      label="Waiting for chair response"
+                      sx={{ 
+                        fontWeight: 500, 
+                        bgcolor: '#FF57BB', 
+                        color: 'white',
+                        '& .MuiChip-icon': { color: 'white' }
+                      }}
+                    />
+                  ) : (
+                    /* Show Second button for PROPOSED, or View Debate for DEBATE and later */
+                    <>
+                      <Button 
+                        variant="outlined" 
+                        onClick={handleSecond} 
+                        disabled={isSeconded || seconding}
+                      >
+                        {seconding ? <CircularProgress size={20} /> : isSeconded ? 'Seconded' : 'Second'}
+                      </Button>
 
-                  <Button variant="contained" onClick={toggleDebate} disabled={!isSeconded}>
-                    View Debate
-                  </Button>
+                      {isDebateOrLater && (
+                        <Button variant="contained" onClick={toggleDebate}>
+                          View Debate
+                        </Button>
+                      )}
+                    </>
+                  )}
                 </Box>
 
-                <Button
-                  variant="outlined"
-                  onClick={() => setVotingPanelOpen(true)}
-                  startIcon={<HowToVoteIcon />}
-                >
-                  Voting
-                </Button>
+                {/* Only show Voting button when motion is in VOTING or later */}
+                {isVotingOrLater && (
+                  <Button
+                    variant="outlined"
+                    onClick={() => setVotingPanelOpen(true)}
+                    startIcon={<HowToVoteIcon />}
+                  >
+                    Voting
+                  </Button>
+                )}
               </Box>
             </Paper>
           </Box>
@@ -246,52 +334,55 @@ function MotionPage() {
           )}
         </Container>
 
-        <Box component="footer" sx={{bottom: 16, left: { xs: 16, md: 24 }, right: { xs: 16, md: 24 }, zIndex: (theme) => theme.zIndex.drawer + 1 }}>
-          <Paper variant="outlined" sx={{ p: 2, display: 'flex', flexDirection: 'column', maxWidth: 'calc(100% - 48px)', margin: '0 auto' }}>
-            <TextField
-              placeholder="Type here"
-              value={textInput}
-              onChange={(e) => setTextInput(e.target.value)}
-              multiline
-              minRows={2}
-              fullWidth
-            />
-
-            <Box sx={{ display: 'flex', gap: 1, mt: 1, alignItems: 'center' }}>
+        {/* Only show debate input footer when motion is in DEBATE status */}
+        {isDebateStatus && (
+          <Box component="footer" sx={{bottom: 16, left: { xs: 16, md: 24 }, right: { xs: 16, md: 24 }, zIndex: (theme) => theme.zIndex.drawer + 1 }}>
+            <Paper variant="outlined" sx={{ p: 2, display: 'flex', flexDirection: 'column', maxWidth: 'calc(100% - 48px)', margin: '0 auto' }}>
               <TextField
-                select
-                size="small"
-                value={debatePosition}
-                onChange={(e) => setDebatePosition(e.target.value)}
-                sx={{ minWidth: 120 }}
-                SelectProps={{ native: true }}
-              >
-                <option value="NEUTRAL">Neutral</option>
-                <option value="SUPPORT">Support</option>
-                <option value="OPPOSE">Oppose</option>
-              </TextField>
+                placeholder="Type here"
+                value={textInput}
+                onChange={(e) => setTextInput(e.target.value)}
+                multiline
+                minRows={2}
+                fullWidth
+              />
 
-              <Button 
-                variant="contained" 
-                endIcon={submittingDebate ? <CircularProgress size={20} /> : <SendIcon />} 
-                onClick={handleDebateSubmit} 
-                disabled={motion.status !== 'DEBATE' || !textInput.trim() || submittingDebate}
-              >
-                Send
-              </Button>
-              {motion.status === 'DEBATE' && (
-                <Button
-                  variant="outlined"
-                  onClick={handleProposeVote}
-                  disabled={openingVote}
-                  startIcon={openingVote ? <CircularProgress size={20} /> : null}
+              <Box sx={{ display: 'flex', gap: 1, mt: 1, alignItems: 'center' }}>
+                <TextField
+                  select
+                  size="small"
+                  value={debatePosition}
+                  onChange={(e) => setDebatePosition(e.target.value)}
+                  sx={{ minWidth: 120 }}
+                  SelectProps={{ native: true }}
                 >
-                  {openingVote ? 'Opening...' : 'Propose Vote'}
+                  <option value="NEUTRAL">Neutral</option>
+                  <option value="SUPPORT">Support</option>
+                  <option value="OPPOSE">Oppose</option>
+                </TextField>
+
+                <Button 
+                  variant="contained" 
+                  endIcon={submittingDebate ? <CircularProgress size={20} /> : <SendIcon />} 
+                  onClick={handleDebateSubmit} 
+                  disabled={motion.status !== 'DEBATE' || !textInput.trim() || submittingDebate}
+                >
+                  Send
                 </Button>
-              )}
-            </Box>
-          </Paper>
-        </Box>
+                {isChair && (
+                  <Button
+                    variant="outlined"
+                    onClick={handleProposeVote}
+                    disabled={openingVote}
+                    startIcon={openingVote ? <CircularProgress size={20} /> : null}
+                  >
+                    {openingVote ? 'Opening...' : 'Open Voting'}
+                  </Button>
+                )}
+              </Box>
+            </Paper>
+          </Box>
+        )}
       </Box>
 
       <VotingPanel

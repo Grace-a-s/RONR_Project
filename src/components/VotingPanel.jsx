@@ -42,7 +42,7 @@ function VotingPanel({ open, onClose, motion, onVoteSuccess }) {
     try {
       setLoading(true);
       const token = await getAccessTokenSilently();
-      const votesData = await getVotes(motion.id, token);
+      const votesData = await getVotes(motion._id, token);
 
       // Ensure votesData is an array
       const validVotes = Array.isArray(votesData) ? votesData : [];
@@ -82,7 +82,7 @@ function VotingPanel({ open, onClose, motion, onVoteSuccess }) {
     try {
       setLoading(true);
       const token = await getAccessTokenSilently();
-      const result = await castVote(motion.id, position, token);
+      const result = await castVote(motion._id, position, token);
 
       setSnackbar({ open: true, message: `Vote cast: ${position}`, severity: 'success' });
 
