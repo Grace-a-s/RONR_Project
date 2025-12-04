@@ -28,10 +28,29 @@ const uri = `mongodb+srv://${encodedUsername}:${encodedPassword}@${cluster}/?app
 let conn = null;
 
 export async function connectDatabase() {
-  if (conn) return conn;
+  // Check if we have an active connection
+  if (conn && mongoose.connection.readyState === 1) {
+    return conn;
+  }
+
+  // If connection exists but is not ready, disconnect first
+  if (mongoose.connection.readyState !== 0) {
+    try {
+      await mongoose.disconnect();
+    } catch (e) {
+      // Ignore disconnect errors
+    }
+    conn = null;
+  }
 
   conn = await mongoose.connect(uri, {
-    serverSelectionTimeoutMS: 5000,
+    serverSelectionTimeoutMS: 30000,
+    socketTimeoutMS: 45000,
+    maxPoolSize: 10,
+    minPoolSize: 1,
+    maxIdleTimeMS: 30000,
+    retryWrites: true,
+    retryReads: true,
   });
 
   return conn;
