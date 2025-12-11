@@ -55,23 +55,16 @@ function MotionPage() {
   const polling_interval = 3000; 
 
   // Fetch motion data from backend
-  useEffect(() => {
-    const fetchMotion = async () => {
+  useAutoRefresh(async () => {
+    if (motionId) {
       try {
-        setLoading(true);
         const motionData = await getMotion(motionId);
         setMotion(motionData);
       } catch (error) {
         console.error('Failed to load motion:', error);
-      } finally {
-        setLoading(false);
       }
-    };
-
-    if (motionId) {
-      fetchMotion();
     }
-  }, [motionId, getMotion]);
+  }, polling_interval, [motionId, getMotion]);
 
   // Fetch user's role in the committee
   useEffect(() => {
