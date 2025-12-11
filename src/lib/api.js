@@ -77,7 +77,7 @@ export async function chairApproveMotion(motionId, action, token) {
 }
 
 export async function getCommitteeMemberCount(committeeId, token) {
-  const url = `/.netlify/functions/committees/${committeeId}/memberships`;
+  const url = `/.netlify/functions/committees/${committeeId}/member`;
   return fetchJson(url, {
     method: "GET",
     headers: {
