@@ -52,16 +52,35 @@ function MotionPage() {
   const [seconding, setSeconding] = useState(false);
   const [submittingDebate, setSubmittingDebate] = useState(false);
 
-  const polling_interval = 3000; 
+  const polling_interval = 5000;  // 5 seconds - reduced polling frequency for better performance
 
-  // Fetch motion data from backend
+  // Fetch motion data from backend (initial load only)
+  useEffect(() => {
+    const fetchMotion = async () => {
+      try {
+        setLoading(true);
+        const motionData = await getMotion(motionId);
+        setMotion(motionData);
+      } catch (error) {
+        console.error('Failed to load motion:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (motionId) {
+      fetchMotion();
+    }
+  }, [motionId, getMotion]);
+
+  // Poll for motion updates after initial load
   useAutoRefresh(async () => {
     if (motionId) {
       try {
         const motionData = await getMotion(motionId);
         setMotion(motionData);
       } catch (error) {
-        console.error('Failed to load motion:', error);
+        console.error('Failed to update motion:', error);
       }
     }
   }, polling_interval, [motionId, getMotion]);
