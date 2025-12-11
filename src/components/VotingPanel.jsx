@@ -19,6 +19,7 @@ import ThumbDownIcon from '@mui/icons-material/ThumbDown';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import { castVote, getVotes, getCommitteeMemberCount } from '../lib/api';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
 
 function VotingPanel({ open, onClose, motion, onVoteSuccess }) {
   const { user, getAccessTokenSilently } = useAuth0();
@@ -31,12 +32,14 @@ function VotingPanel({ open, onClose, motion, onVoteSuccess }) {
   const [opposeCount, setOpposeCount] = useState(0);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
 
-  useEffect(() => {
+   const polling_interval = 3000; 
+
+  useAutoRefresh(() => {
     if (open && motion) {
       fetchVotes();
       fetchMemberCount();
     }
-  }, [open, motion]);
+  }, polling_interval, [open, motion]);
 
   const fetchVotes = async () => {
     try {
