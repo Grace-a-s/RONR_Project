@@ -101,6 +101,7 @@ function VotingPanel({ open, onClose, motion, onVoteSuccess }) {
   const threshold = Math.ceil((totalMembers * 2) / 3);
   const supportProgress = totalMembers > 0 ? (supportCount / threshold) * 100 : 0;
   const opposeProgress = totalMembers > 0 ? (opposeCount / threshold) * 100 : 0;
+  const totalVotesCast = supportCount + opposeCount;
 
   return (
     <>
@@ -133,6 +134,9 @@ function VotingPanel({ open, onClose, motion, onVoteSuccess }) {
             <Typography variant="subtitle2" gutterBottom>
               Vote Progress
             </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
+              Bars show progress toward 2/3 threshold • Percentages show vote distribution
+            </Typography>
 
             <Box sx={{ mt: 2 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
@@ -140,7 +144,7 @@ function VotingPanel({ open, onClose, motion, onVoteSuccess }) {
                   Support
                 </Typography>
                 <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                  {supportCount} ({totalMembers > 0 ? Math.round((supportCount / totalMembers) * 100) : 0}%)
+                  {supportCount} ({totalVotesCast > 0 ? Math.round((supportCount / totalVotesCast) * 100) : 0}%)
                 </Typography>
               </Box>
               <LinearProgress
@@ -163,7 +167,7 @@ function VotingPanel({ open, onClose, motion, onVoteSuccess }) {
                   Oppose
                 </Typography>
                 <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                  {opposeCount} ({totalMembers > 0 ? Math.round((opposeCount / totalMembers) * 100) : 0}%)
+                  {opposeCount} ({totalVotesCast > 0 ? Math.round((opposeCount / totalVotesCast) * 100) : 0}%)
                 </Typography>
               </Box>
               <LinearProgress
