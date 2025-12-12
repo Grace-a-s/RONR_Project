@@ -1,13 +1,47 @@
+import React, { useEffect, useState } from 'react';
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
 import Chip from '@mui/material/Chip';
 import Button from '@mui/material/Button';
+import { useUsersApi } from "../utils/usersApi";
 
 function MotionDetailsCard({ motion = {}, onClick }) {
-    const statusLabel = motion.status || (motion.second ? 'SECONDED' : 'PENDING');
+    const { getUsernameById } = useUsersApi();
+    const [user, setUser] = useState({ username: null });
+    const [loading, setLoading] = useState(false);
 
+    useEffect(() => {
+        let mounted = true;
+        if (!motion || !motion.author) {
+            setUser({ username: null });
+            return () => { mounted = false; };
+        }
+
+        (async () => {
+            try {
+                setLoading(true);
+                const data = await getUsernameById(motion.author);
+                if (!mounted) return;
+                // data may be an object like { username } or an error payload
+                if (data && typeof data === 'object' && 'username' in data) {
+                    setUser({ username: data.username });
+                } else {
+                    setUser({ username: null });
+                }
+            } catch (err) {
+                console.error('Failed to fetch username', err);
+                if (mounted) setUser({ username: null });
+            } finally {
+                if (mounted) setLoading(false);
+            }
+        })();
+
+        return () => { mounted = false; };
+    }, [motion, getUsernameById]);
+
+    const statusLabel = motion.status || (motion.second ? 'SECONDED' : 'PENDING');
     return (
         <Card
             sx={{
@@ -26,7 +60,9 @@ function MotionDetailsCard({ motion = {}, onClick }) {
                 <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2 }}>
                     <Box sx={{ minWidth: 0 }}>
                         <Typography variant="h6" noWrap sx={{ fontWeight: 700 }}>{motion.title}</Typography>
-                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>Proposed by {motion.author || 'Member'}</Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                            Proposed by {loading ? 'Loading...' : (user?.username || 'Member')}
+                        </Typography>
 
                         <Box sx={{ mt: 1 }}>
                             <Box sx={{ bgcolor: '#f7f7f7', p: 1, borderRadius: 1 }}>
