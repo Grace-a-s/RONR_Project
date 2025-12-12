@@ -8,6 +8,7 @@ import {
   createUser,
   updateUser,
   getUserByUsername,
+  getUsernameById,
 } from "./controller/userController.mjs";
 
 const router = createRouter();
