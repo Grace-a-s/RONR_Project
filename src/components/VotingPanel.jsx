@@ -26,6 +26,7 @@ function VotingPanel({ open, onClose, motion, onVoteSuccess }) {
   const [votes, setVotes] = useState([]);
   const [userVote, setUserVote] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [casting, setCasting] = useState(false);
   const [showVotes, setShowVotes] = useState(false);
   const [totalMembers, setTotalMembers] = useState(0);
   const [supportCount, setSupportCount] = useState(0);
@@ -43,7 +44,6 @@ function VotingPanel({ open, onClose, motion, onVoteSuccess }) {
 
   const fetchVotes = async () => {
     try {
-      setLoading(true);
       const token = await getAccessTokenSilently();
       const votesData = await getVotes(motion._id, token);
 
@@ -66,8 +66,6 @@ function VotingPanel({ open, onClose, motion, onVoteSuccess }) {
       setUserVote(null);
       console.error('Failed to fetch votes:', error);
       setSnackbar({ open: true, message: error.message || 'Failed to fetch votes', severity: 'error' });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -83,7 +81,7 @@ function VotingPanel({ open, onClose, motion, onVoteSuccess }) {
 
   const handleVote = async (position) => {
     try {
-      setLoading(true);
+      setCasting(true);
       const token = await getAccessTokenSilently();
       const result = await castVote(motion._id, position, token);
 
@@ -97,7 +95,7 @@ function VotingPanel({ open, onClose, motion, onVoteSuccess }) {
     } catch (error) {
       setSnackbar({ open: true, message: error.message || 'Failed to cast vote', severity: 'error' });
     } finally {
-      setLoading(false);
+      setCasting(false);
     }
   };
 
@@ -212,8 +210,8 @@ function VotingPanel({ open, onClose, motion, onVoteSuccess }) {
                 <Button
                   variant="contained"
                   fullWidth
-                  startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <ThumbUpIcon />}
-                  disabled={loading}
+                  startIcon={casting ? <CircularProgress size={20} color="inherit" /> : <ThumbUpIcon />}
+                  disabled={casting}
                   onClick={() => handleVote('SUPPORT')}
                   sx={{
                     bgcolor: '#57CC99',
@@ -225,8 +223,8 @@ function VotingPanel({ open, onClose, motion, onVoteSuccess }) {
                 <Button
                   variant="contained"
                   fullWidth
-                  startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <ThumbDownIcon />}
-                  disabled={loading}
+                  startIcon={casting ? <CircularProgress size={20} color="inherit" /> : <ThumbDownIcon />}
+                  disabled={casting}
                   onClick={() => handleVote('OPPOSE')}
                   sx={{
                     bgcolor: '#FF57BB',
