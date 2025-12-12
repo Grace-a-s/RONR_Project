@@ -28,6 +28,7 @@ import VotingPanel from '../components/VotingPanel';
 import { openVoting, chairApproveMotion } from '../lib/api';
 import { useMotionsApi } from '../utils/motionsApi';
 import { useMembershipsApi } from '../utils/membershipsApi';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
 
 function MotionPage() {
   const { committeeId, motionId } = useParams();
@@ -51,7 +52,9 @@ function MotionPage() {
   const [seconding, setSeconding] = useState(false);
   const [submittingDebate, setSubmittingDebate] = useState(false);
 
-  // Fetch motion data from backend
+  const polling_interval = 5000;  // 5 seconds - reduced polling frequency for better performance
+
+  // Fetch motion data from backend (initial load only)
   useEffect(() => {
     const fetchMotion = async () => {
       try {
@@ -70,19 +73,29 @@ function MotionPage() {
     }
   }, [motionId, getMotion]);
 
+  // Poll for motion updates after initial load
+  useAutoRefresh(async () => {
+    if (motionId) {
+      try {
+        const motionData = await getMotion(motionId);
+        setMotion(motionData);
+      } catch (error) {
+        console.error('Failed to update motion:', error);
+      }
+    }
+  }, polling_interval, [motionId, getMotion]);
+
   // Fetch user's role in the committee
   useEffect(() => {
     const fetchUserRole = async () => {
       if (!committeeId || !user?.sub) return;
       try {
         const members = await listMembers();
-        console.log("MEMBERS", members);
         // userId may be populated as an object or be a string
         const currentUser = members.find(member => {
           const memberId = typeof member.userId === 'object' ? member.userId._id : member.userId;
           return memberId === user.sub;
         });
-        console.log("USER", currentUser);
         setUserRole(currentUser?.role || null);
       } catch (error) {
         console.error('Failed to load user role:', error);
@@ -93,20 +106,16 @@ function MotionPage() {
   }, [committeeId, user?.sub, listMembers]);
 
   // Fetch debates when showDebate is toggled on
-  useEffect(() => {
-    const fetchDebates = async () => {
+  useAutoRefresh(async () => {
+    if (showDebate && motionId) {
       try {
         const debatesData = await getDebates(motionId);
         setDebates(debatesData || []);
       } catch (error) {
         console.error('Failed to load debates:', error);
       }
-    };
-
-    if (showDebate && motionId) {
-      fetchDebates();
     }
-  }, [showDebate, motionId, getDebates]);
+  }, polling_interval, [showDebate, motionId, getDebates]);
 
   const handleSecond = async () => {
     if (!motion) return;
@@ -194,7 +203,6 @@ function MotionPage() {
   const isDebateStatus = motion && motion.status === 'DEBATE';
   const isDebateOrLater = motion && ['DEBATE', 'VOTING', 'PASSED', 'REJECTED'].includes(motion.status);
   const isVotingOrLater = motion && ['VOTING', 'PASSED', 'REJECTED'].includes(motion.status);
-console.log("CHAIR", isChair);
   if (loading) return <Container sx={{ py: 6 }}><Typography>Loading...</Typography></Container>;
   if (!motion) return <Container sx={{ py: 6 }}><Typography>Motion not found</Typography></Container>;
 
