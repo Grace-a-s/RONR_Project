@@ -1,5 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
+import { useNavigate } from 'react-router-dom';
+import IconButton from '@mui/material/IconButton';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
@@ -29,6 +32,7 @@ const normalizeFormValues = (values = {}) => ({
 
 function UserProfilePage() {
     const { user: auth0User } = useAuth0();
+    const navigate = useNavigate();
     const { getCurrentUser, upsertCurrentUser } = useUsersApi();
 
     const [formValues, setFormValues] = useState(EMPTY_FORM);
@@ -107,7 +111,15 @@ function UserProfilePage() {
 
     return (
         <Box sx={{ p: 3 }}>
-            <Paper sx={{ p: 3 }} elevation={1}>
+            <Paper sx={{ p: 3, position: 'relative' }} elevation={1}>
+                <IconButton
+                    aria-label="exit user profile"
+                    onClick={() => navigate(-1)}
+                    size="small"
+                    sx={{ position: 'absolute', top: 12, left: 12 }}
+                >
+                    <ArrowBackIcon />
+                </IconButton>
                 {loading ? (
                     <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
                         <CircularProgress />

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { DataGrid } from '@mui/x-data-grid';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
@@ -10,6 +10,7 @@ import Alert from '@mui/material/Alert';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import PersonAddAltIcon from '@mui/icons-material/PersonAddAlt';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useMembershipsApi } from '../utils/membershipsApi';
 import { useUsersApi } from '../utils/usersApi';
@@ -25,6 +26,7 @@ const formatName = (userInfo = {}) => {
 
 function CommitteeMembershipPage() {
     const { committeeId } = useParams();
+    const navigate = useNavigate();
     const { user } = useAuth0();
     const { listMembers, addMember, removeMember, updateMemberRole } = useMembershipsApi(committeeId);
     const { getUserByUsername } = useUsersApi();
@@ -182,7 +184,19 @@ function CommitteeMembershipPage() {
                 </Alert>
             )}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 2 }}>
-                <Typography variant="h5">Membership</Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <IconButton
+                                aria-label="back to committee"
+                                onClick={() => {
+                                    if (committeeId) navigate(`/committee/${encodeURIComponent(committeeId)}`);
+                                    else navigate(-1);
+                                }}
+                                size="small"
+                            >
+                                <ArrowBackIcon />
+                            </IconButton>
+                            <Typography variant="h5">Membership</Typography>
+                        </Box>
                 {isOwner && (
                     <Button variant="contained" startIcon={<PersonAddAltIcon />} onClick={handleAddMember}>
                         Add Member
