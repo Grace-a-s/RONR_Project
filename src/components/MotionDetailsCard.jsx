@@ -12,6 +12,7 @@ function MotionDetailsCard({ motion = {}, onClick }) {
     const [user, setUser] = useState({ username: null });
     const [loading, setLoading] = useState(false);
 
+    //getting usernames, be in loading state until gets username (or fails)
     useEffect(() => {
         let mounted = true;
         if (!motion || !motion.author) {
