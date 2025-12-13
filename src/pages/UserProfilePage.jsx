@@ -111,7 +111,7 @@ function UserProfilePage() {
     }, [email, formValues, upsertCurrentUser]);
 
     if (loading) {
-        return <LoadingPage message="Getting your profile…" />;
+        return <LoadingPage/>;
     }
 
     return (

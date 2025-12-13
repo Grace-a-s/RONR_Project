@@ -204,7 +204,7 @@ function MotionPage() {
   const isDebateOrLater = motion && ['DEBATE', 'VOTING', 'PASSED', 'REJECTED'].includes(motion.status);
   const isVotingOrLater = motion && ['VOTING', 'PASSED', 'REJECTED'].includes(motion.status);
   if (loading) 
-    return <LoadingPage message="Loading motion details…" />;
+    return <LoadingPage/>;
   if (!motion) return <Container sx={{ py: 6 }}><Typography>Motion not found</Typography></Container>;
 
   return (

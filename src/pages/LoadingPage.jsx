@@ -3,7 +3,7 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import { DotLoader } from 'react-spinners';
 
-function LoadingPage({ message = 'Loading your workspace…' }) {
+function LoadingPage() {
   return (
     <Box
       sx={{
@@ -18,9 +18,6 @@ function LoadingPage({ message = 'Loading your workspace…' }) {
       }}
     >
       <DotLoader color="#0ba179" size={64} />
-      <Typography variant="h6" sx={{ color: 'text.secondary', textAlign: 'center' }}>
-        {message}
-      </Typography>
     </Box>
   );
 }

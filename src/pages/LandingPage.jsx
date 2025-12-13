@@ -143,7 +143,7 @@ function LandingPage() {
   const pageLoading = !profile || isLoading || loadingCommittees;
 
   if (pageLoading) {
-    return <LoadingPage message="Loading your committees…" />;
+    return <LoadingPage/>;
   }
 
   return (

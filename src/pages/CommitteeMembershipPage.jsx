@@ -178,7 +178,7 @@ function CommitteeMembershipPage() {
     }, [handleEdit, handleRemove, isOwner]);
 
     if (loading) {
-        return <LoadingPage message="Getting committee memberships..." />;
+        return <LoadingPage/>;
     }
 
     return (

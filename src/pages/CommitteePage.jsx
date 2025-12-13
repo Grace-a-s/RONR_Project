@@ -158,7 +158,7 @@ function CommitteePage() {
   const pageLoading = committeeLoading || motionsLoading || membersLoading;
 
   if (pageLoading) {
-    return <LoadingPage message="Getting your committee's page…" />;
+    return <LoadingPage/>;
   }
 
   return (
