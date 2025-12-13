@@ -101,6 +101,7 @@ function LandingPage() {
               setProfile(existingUser);
             }
           }
+          console.log("Found existing user profile with username ", existingUser.username);
         } catch (lookupErr) {
           if (lookupErr?.status !== 404) {
             console.error('Failed to load existing user profile', lookupErr);
@@ -116,6 +117,7 @@ function LandingPage() {
           syncedUserIdRef.current = userId;
           setProfile((prev) => prev || updated || null);
         }
+        console.log("Updating user profile");
       } catch (err) {
         console.error('Failed to sync user profile', err);
       }
@@ -138,8 +140,7 @@ function LandingPage() {
     navigate(`/committee/${encodeURIComponent(c.id)}`);
   };
 
-  const profileLoading = isLoading && !profile && !user;
-  const pageLoading = profileLoading || loadingCommittees;
+  const pageLoading = !profile || isLoading || loadingCommittees;
 
   if (pageLoading) {
     return <LoadingPage message="Loading your committees…" />;
@@ -150,7 +151,7 @@ function LandingPage() {
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 10, gap: 2 }}>
         <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
           <Typography variant="h2" component="h1" sx={{ lineHeight: 1, fontWeight: 400 }}>
-            {`Welcome, ${profile?.username || user?.name}!`}
+            {`Welcome, ${profile?.username}!`}
           </Typography>
           {/* <Typography variant="h6" component="h2" sx={{ mt: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             You have [#] motions across [#] committees
