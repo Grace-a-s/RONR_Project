@@ -12,6 +12,7 @@ import AddIcon from '@mui/icons-material/Add';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useUsersApi } from '../utils/usersApi';
 import { useCommitteesApi } from '../utils/committeesApi';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import LoadingPage from './LoadingPage.jsx';
 
 
@@ -26,6 +27,8 @@ function LandingPage() {
   const [savingCommittee, setSavingCommittee] = useState(false);
   const syncedUserIdRef = useRef(null);
   const { listCommittees, createCommittee } = useCommitteesApi();
+
+  const polling_interval = 60000; // 1 min
 
   const normalizeCommittee = useCallback((committee) => ({
     id: committee?._id ? String(committee._id) : String(committee?.id || Date.now()),
@@ -53,6 +56,10 @@ function LandingPage() {
   useEffect(() => {
     fetchCommittees();
   }, [fetchCommittees]);
+
+  useAutoRefresh(() => {
+    fetchCommittees();
+  }, polling_interval,[fetchCommittees]);
 
   const handleCreate = async (e) => {
     e.preventDefault();

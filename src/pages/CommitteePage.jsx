@@ -21,6 +21,7 @@ import LoadingPage from './LoadingPage.jsx';
 import { useCommitteesApi } from '../utils/committeesApi';
 import { useMotionsApi } from '../utils/motionsApi';
 import { useMembershipsApi } from '../utils/membershipsApi';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
 
 function CommitteePage() {
   const navigate = useNavigate();
@@ -41,6 +42,8 @@ function CommitteePage() {
   const { getCommittee } = useCommitteesApi();
   const { listMotions, createMotion } = useMotionsApi();
   const { listMembers } = useMembershipsApi(committeeId);
+
+  const polling_interval = 30000; // 30 sec
 
   const mapMotion = useCallback((motion = {}) => ({
     id: String(motion._id),
@@ -85,9 +88,9 @@ function CommitteePage() {
     refreshCommittee();
   }, [refreshCommittee]);
 
-  useEffect(() => {
+  useAutoRefresh(() => {
     refreshMotions();
-  }, [refreshMotions]);
+  }, polling_interval,[refreshMotions]);
 
   const refreshMembersCount = useCallback(async () => {
     if (!committeeId) return;
@@ -104,9 +107,9 @@ function CommitteePage() {
     }
   }, [committeeId, listMembers]);
 
-  useEffect(() => {
+  useAutoRefresh(() => {
     refreshMembersCount();
-  }, [refreshMembersCount]);
+  }, polling_interval, [refreshMembersCount]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -143,7 +146,6 @@ function CommitteePage() {
 
 
   const motionsCount = motions.length;
-  const bannerLoading = committeeLoading || membersLoading;
 
   const filteredMotions = useMemo(() => {
     if (!searchQuery.trim()) return motions;
@@ -179,12 +181,6 @@ function CommitteePage() {
         <Container maxWidth="xl">
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
             <Box sx={{ minWidth: 0 }}>
-              {bannerLoading ? (
-                <Stack direction="row" spacing={2} alignItems="center">
-                  <CircularProgress color="inherit" size={24} thickness={4} />
-                  <Typography variant="body2">Loading committee details…</Typography>
-                </Stack>
-              ) : (
                 <>
                   <Typography variant="h5" sx={{ fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{committee?.name || `Committee ${committeeId}`}</Typography>
                   <Typography variant="body2" sx={{ mt: 1, color: 'rgba(255,255,255,0.9)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
@@ -203,7 +199,6 @@ function CommitteePage() {
                     </Box>
                   </Stack>
                 </>
-              )}
             </Box>
 
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
