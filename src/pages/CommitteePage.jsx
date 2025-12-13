@@ -17,6 +17,7 @@ import CreateMotionDialog from '../components/CreateMotionDialog';
 import MotionDetailsCard from '../components/MotionDetailsCard';
 import CircularProgress from '@mui/material/CircularProgress';
 import Alert from '@mui/material/Alert';
+import LoadingPage from './LoadingPage.jsx';
 import { useCommitteesApi } from '../utils/committeesApi';
 import { useMotionsApi } from '../utils/motionsApi';
 import { useMembershipsApi } from '../utils/membershipsApi';
@@ -153,6 +154,12 @@ function CommitteePage() {
       return title.includes(lowered) || description.includes(lowered);
     });
   }, [motions, searchQuery]);
+
+  const pageLoading = committeeLoading || motionsLoading || membersLoading;
+
+  if (pageLoading) {
+    return <LoadingPage message="Getting your committee's page…" />;
+  }
 
   return (
     <Container maxWidth="xl" sx={{ marginTop: 4 }}>

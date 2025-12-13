@@ -10,10 +10,9 @@ import Button from '@mui/material/Button';
 import Grid from '@mui/material/Grid';
 import AddIcon from '@mui/icons-material/Add';
 import { useAuth0 } from '@auth0/auth0-react';
-import Alert from '@mui/material/Alert';
-import CircularProgress from '@mui/material/CircularProgress';
 import { useUsersApi } from '../utils/usersApi';
 import { useCommitteesApi } from '../utils/committeesApi';
+import LoadingPage from './LoadingPage.jsx';
 
 
 function LandingPage() {
@@ -139,11 +138,20 @@ function LandingPage() {
     navigate(`/committee/${encodeURIComponent(c.id)}`);
   };
 
+  const profileLoading = isLoading && !profile && !user;
+  const pageLoading = profileLoading || loadingCommittees;
+
+  if (pageLoading) {
+    return <LoadingPage message="Loading your committees…" />;
+  }
+
   return (
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 10, gap: 2 }}>
         <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
-          <Typography variant="h2" component="h1" sx={{ lineHeight: 1, fontWeight: 400 }}>Welcome, {profile?.username || user?.name || 'User'}!</Typography>
+          <Typography variant="h2" component="h1" sx={{ lineHeight: 1, fontWeight: 400 }}>
+            {`Welcome, ${profile?.username || user?.name}!`}
+          </Typography>
           {/* <Typography variant="h6" component="h2" sx={{ mt: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             You have [#] motions across [#] committees
           </Typography> */}
@@ -157,28 +165,19 @@ function LandingPage() {
       </Box>
 
       <Box>
-        {loadingCommittees ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
-            <CircularProgress />
-          </Box>
+        <Typography variant="h4" component="h2" sx={{ mb: 2 }}>Your Committees</Typography>
+        {committees.length === 0 ? (
+          <Card sx={{ p: 4, textAlign: 'center' }}>
+            <Typography>No committees yet! Create one to get started.</Typography>
+          </Card>
         ) : (
-          <>
-            <Typography variant="h4" component="h2" sx={{ mb: 2 }}>Your Committees</Typography>
-
-            {committees.length === 0 ? (
-              <Card sx={{ p: 4, textAlign: 'center' }}>
-                <Typography>No committees yet! Create one to get started.</Typography>
-              </Card>
-            ) : (
-              <Grid container spacing={3}>
-                {committees.map((c) => (
-                  <Grid item xs={12} sm={6} md={4} lg={3} key={c.id}>
-                    <CommitteeCard committee={c} onClick={() => openCommittee(c)} />
-                  </Grid>
-                ))}
+          <Grid container spacing={3}>
+            {committees.map((c) => (
+              <Grid item xs={12} sm={6} md={4} lg={3} key={c.id}>
+                <CommitteeCard committee={c} onClick={() => openCommittee(c)} />
               </Grid>
-            )}
-          </>
+            ))}
+          </Grid>
         )}
       </Box>
 

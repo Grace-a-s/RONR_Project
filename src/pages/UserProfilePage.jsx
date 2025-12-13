@@ -18,6 +18,7 @@ import SaveIcon from '@mui/icons-material/Save';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import LoadingPage from './LoadingPage.jsx';
 import { useUsersApi } from '../utils/usersApi';
 
 const EMPTY_FORM = { username: '', firstName: '', lastName: '', pronouns: '', about: '' };
@@ -109,6 +110,10 @@ function UserProfilePage() {
         }
     }, [email, formValues, upsertCurrentUser]);
 
+    if (loading) {
+        return <LoadingPage message="Getting your profile…" />;
+    }
+
     return (
         <Box sx={{ p: 3 }}>
             <Paper sx={{ p: 3, position: 'relative' }} elevation={1}>
@@ -120,11 +125,7 @@ function UserProfilePage() {
                 >
                     <ArrowBackIcon />
                 </IconButton>
-                {loading ? (
-                    <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
-                        <CircularProgress />
-                    </Box>
-                ) : (
+                
                     <>
                         {error && (
                             <Alert
@@ -227,7 +228,7 @@ function UserProfilePage() {
                             </Grid>
                         </Grid>
                     </>
-                )}
+                
             </Paper>
         </Box>
     );

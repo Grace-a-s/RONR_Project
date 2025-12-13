@@ -25,6 +25,7 @@ import HowToVoteIcon from '@mui/icons-material/HowToVote';
 import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty';
 import { useAuth0 } from "@auth0/auth0-react";
 import VotingPanel from '../components/VotingPanel';
+import LoadingPage from './LoadingPage.jsx';
 import { openVoting, chairApproveMotion } from '../lib/api';
 import { useMotionsApi } from '../utils/motionsApi';
 import { useMembershipsApi } from '../utils/membershipsApi';
@@ -44,7 +45,6 @@ function MotionPage() {
   const [debates, setDebates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showDebate, setShowDebate] = useState(false);
-  const [anchorEl, setAnchorEl] = useState(null);
   const [textInput, setTextInput] = useState('');
   const [debatePosition, setDebatePosition] = useState('NEUTRAL');
   const [votingPanelOpen, setVotingPanelOpen] = useState(false);
@@ -203,7 +203,8 @@ function MotionPage() {
   const isDebateStatus = motion && motion.status === 'DEBATE';
   const isDebateOrLater = motion && ['DEBATE', 'VOTING', 'PASSED', 'REJECTED'].includes(motion.status);
   const isVotingOrLater = motion && ['VOTING', 'PASSED', 'REJECTED'].includes(motion.status);
-  if (loading) return <Container sx={{ py: 6 }}><Typography>Loading...</Typography></Container>;
+  if (loading) 
+    return <LoadingPage message="Loading motion details…" />;
   if (!motion) return <Container sx={{ py: 6 }}><Typography>Motion not found</Typography></Container>;
 
   return (

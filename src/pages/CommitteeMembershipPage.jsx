@@ -11,6 +11,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import PersonAddAltIcon from '@mui/icons-material/PersonAddAlt';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import LoadingPage from './LoadingPage.jsx';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useMembershipsApi } from '../utils/membershipsApi';
 import { useUsersApi } from '../utils/usersApi';
@@ -176,9 +177,13 @@ function CommitteeMembershipPage() {
         ];
     }, [handleEdit, handleRemove, isOwner]);
 
+    if (loading) {
+        return <LoadingPage message="Getting committee memberships..." />;
+    }
+
     return (
         <Paper sx={{ m: 5, p: 3 }}>
-            {!loading && !hasChair && (
+            {!hasChair && (
                 <Alert severity="warning" sx={{ mb: 2 }}>
                     WARNING: This committee currently doesn't have a presiding chair
                 </Alert>
