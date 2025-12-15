@@ -232,7 +232,20 @@ function CommitteeMembershipPage() {
                 </Alert>
             )}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 2 }}>
-                <Typography variant="h5">Membership</Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <IconButton
+                        aria-label="back to committee"
+                        onClick={() => {
+                                if (committeeId) navigate(`/committee/${encodeURIComponent(committeeId)}`);
+                                else navigate(-1);
+                                }}
+                        size="small"
+                    >
+                        <ArrowBackIcon />
+                    </IconButton>
+                    <Typography variant="h5">Membership</Typography>
+                </Box>
+
                 <Box sx={{ display: 'flex', gap: 2 }}>
                     {isChair && (
                         <>
@@ -288,24 +301,7 @@ function CommitteeMembershipPage() {
                         </Button>
                     )}
                 </Box>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                            <IconButton
-                                aria-label="back to committee"
-                                onClick={() => {
-                                    if (committeeId) navigate(`/committee/${encodeURIComponent(committeeId)}`);
-                                    else navigate(-1);
-                                }}
-                                size="small"
-                            >
-                                <ArrowBackIcon />
-                            </IconButton>
-                            <Typography variant="h5">Membership</Typography>
-                        </Box>
-                {isOwner && (
-                    <Button variant="contained" startIcon={<PersonAddAltIcon />} onClick={handleAddMember}>
-                        Add Member
-                    </Button>
-                )}
+
             </Box>
 
             <div style={{ width: '100%' }}>

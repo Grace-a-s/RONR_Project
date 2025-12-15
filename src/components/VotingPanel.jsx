@@ -208,7 +208,7 @@ function VotingPanel({ open, onClose, motion, committee, onVoteSuccess }) {
             </Box>
 
             <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block' }}>
-              Total members: {totalMembers} • Need {threshold} votes ({thresholdDescription}) to pass
+              Total voting members: {totalMembers} • Need {threshold} votes ({thresholdDescription}) to pass
             </Typography>
           </Box>
 
