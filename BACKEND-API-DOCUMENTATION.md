@@ -215,14 +215,14 @@ retrieve the username of user (based on ID, the unique identifier for user entri
 
 **EndPoint**: GET: /users/id/:id
 
-**Authentication** Not required
+**Authentication**: Not required
 
-**Response (200)**
+**Response**(200):
 ```json
 {"username": "johndoe"}
 ```
 
-**Error Response**
+**Error Response**:
 - '400 Bad Request' - id required
 - '404 Not Found' - User not found
 
