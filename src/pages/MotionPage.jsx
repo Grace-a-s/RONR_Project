@@ -29,6 +29,7 @@ import { openVoting, chairApproveMotion } from '../lib/api';
 import { useMotionsApi } from '../utils/motionsApi';
 import { useMembershipsApi } from '../utils/membershipsApi';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
+import { useUsersApi } from "../utils/usersApi";
 
 function MotionPage() {
   const { committeeId, motionId } = useParams();
@@ -51,6 +52,10 @@ function MotionPage() {
   const [openingVote, setOpeningVote] = useState(false);
   const [seconding, setSeconding] = useState(false);
   const [submittingDebate, setSubmittingDebate] = useState(false);
+  const { getUsernameById } = useUsersApi();
+  const [author, setAuthor] = useState({ username: null });
+  const [loadingAuthor, setAuthorLoading] = useState(false);
+  
 
   const polling_interval = 5000;  // 5 seconds - reduced polling frequency for better performance
 
@@ -116,6 +121,36 @@ function MotionPage() {
       }
     }
   }, polling_interval, [showDebate, motionId, getDebates]);
+
+  //getting usernames, be in loading state until gets username (or fails)
+  useEffect(() => {
+    let mounted = true;
+    if (!motion || !motion.author) {
+      setAuthor({ username: null });
+      return () => { mounted = false; };
+      }
+  
+      (async () => {
+        try {
+          setAuthorLoading(true);
+          const data = await getUsernameById(motion.author);
+          if (!mounted) return;
+          // data may be an object like { username } or an error payload
+          if (data && typeof data === 'object' && 'username' in data) {
+              setAuthor({ username: data.username });
+              } else {
+              setAuthor({ username: null });
+              }
+        } catch (err) {
+            console.error('Failed to fetch username', err);
+            if (mounted) setAuthor({ username: null });
+        } finally {
+            if (mounted) setAuthorLoading(false);
+          }
+    })();
+  
+    return () => { mounted = false; };
+  }, [motion, getUsernameById]);
 
   const handleSecond = async () => {
     if (!motion) return;
@@ -327,7 +362,8 @@ function MotionPage() {
 
                       <Box sx={{ flex: 1 }}>
                         <Typography variant="caption" color="text.secondary">
-                          {entry.authorId || 'Member'} · {entry.createdAt ? new Date(entry.createdAt).toLocaleString() : `#${i + 1}`}
+                          {loadingAuthor ? 'Loading...' : (author?.username || 'Member')} · {entry.createdAt ? new Date(entry.createdAt).toLocaleString() : `#${i + 1}`}
+                          
                           {entry.position && (
                             <Chip 
                               label={entry.position} 
