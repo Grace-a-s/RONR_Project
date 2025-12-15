@@ -282,10 +282,11 @@ function CommitteePage() {
               <MenuItem value="PROPOSED">Proposed</MenuItem>
               <MenuItem value="PENDING">Pending</MenuItem>
               <MenuItem value="SECONDED">Seconded</MenuItem>
+              <MenuItem value="VETOED">Vetoed</MenuItem>
               <MenuItem value="DEBATE">Debate</MenuItem>
               <MenuItem value="VOTING">Voting</MenuItem>
               <MenuItem value="PASSED">Passed</MenuItem>
-              <MenuItem value="VETOED">Vetoed</MenuItem>
+              <MenuItem value="REJECTED">Rejected</MenuItem>
             </Select>
           </FormControl>
 

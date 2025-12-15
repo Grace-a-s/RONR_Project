@@ -24,7 +24,9 @@ function MotionDetailsCard({ motion = {}, onClick }) {
             case 'SECONDED':
                 return { sx: { bgcolor: '#38A3A5', ...darkText } };
             case 'VETOED':
-                return { sx: { bgcolor: '#9e9e9e', ...darkText } };
+                return { sx: { bgcolor: '#4f4e4eff', ...lightText } };
+            case 'REJECTED':
+                return { sx: { bgcolor: '#8d0858ff', ...lightText } };
             case 'PROPOSED':
                 return {sx: {bgcolor: '#85D4D5', ...darkText}};
             case 'PENDING':
