@@ -28,6 +28,7 @@ import VotingPanel from '../components/VotingPanel';
 import { openVoting, chairApproveMotion } from '../lib/api';
 import { useMotionsApi } from '../utils/motionsApi';
 import { useMembershipsApi } from '../utils/membershipsApi';
+import { useCommitteesApi } from '../utils/committeesApi';
 
 function MotionPage() {
   const { committeeId, motionId } = useParams();
@@ -36,8 +37,10 @@ function MotionPage() {
   const { user, getAccessTokenSilently } = useAuth0();
   const { getMotion, secondMotion, getDebates, createDebate } = useMotionsApi();
   const { listMembers } = useMembershipsApi(committeeId);
+  const { getCommittee } = useCommitteesApi();
 
   const [motion, setMotion] = useState(null);
+  const [committee, setCommittee] = useState(null);
   const [userRole, setUserRole] = useState(null);
   const [approvingMotion, setApprovingMotion] = useState(false);
   const [debates, setDebates] = useState([]);
@@ -69,6 +72,21 @@ function MotionPage() {
       fetchMotion();
     }
   }, [motionId, getMotion]);
+
+  // Fetch committee data
+  useEffect(() => {
+    const fetchCommittee = async () => {
+      if (!committeeId) return;
+      try {
+        const committeeData = await getCommittee(committeeId);
+        setCommittee(committeeData);
+      } catch (error) {
+        console.error('Failed to load committee:', error);
+      }
+    };
+
+    fetchCommittee();
+  }, [committeeId, getCommittee]);
 
   // Fetch user's role in the committee
   useEffect(() => {
@@ -405,6 +423,7 @@ console.log("CHAIR", isChair);
         open={votingPanelOpen}
         onClose={() => setVotingPanelOpen(false)}
         motion={motion}
+        committee={committee}
         onVoteSuccess={handleVoteSuccess}
       />
     </>

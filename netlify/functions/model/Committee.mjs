@@ -8,6 +8,12 @@ const committeeSchema = new Schema({
     required: true
   },
   description: String,
+  votingThreshold: {
+    type: String,
+    enum: ["MAJORITY", "SUPERMAJORITY"],
+    default: "MAJORITY",
+    required: true
+  }
 }, {
   timestamps: true
 });

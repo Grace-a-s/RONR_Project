@@ -7,12 +7,16 @@ import IconButton from '@mui/material/IconButton';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Alert from '@mui/material/Alert';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import PersonAddAltIcon from '@mui/icons-material/PersonAddAlt';
+import HowToVoteIcon from '@mui/icons-material/HowToVote';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useMembershipsApi } from '../utils/membershipsApi';
 import { useUsersApi } from '../utils/usersApi';
+import { useCommitteesApi } from '../utils/committeesApi';
 
 const ROLE_OPTIONS = ['OWNER', 'CHAIR', 'MEMBER'];
 
@@ -28,11 +32,15 @@ function CommitteeMembershipPage() {
     const { user } = useAuth0();
     const { listMembers, addMember, removeMember, updateMemberRole } = useMembershipsApi(committeeId);
     const { getUserByUsername } = useUsersApi();
+    const { getCommittee, updateVotingThreshold } = useCommitteesApi();
 
     const [rows, setRows] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isOwner, setIsOwner] = useState(false);
     const [hasChair, setHasChair] = useState(true);
+    const [isChair, setIsChair] = useState(false);
+    const [votingThreshold, setVotingThreshold] = useState('MAJORITY');
+    const [thresholdMenuAnchor, setThresholdMenuAnchor] = useState(null);
 
     const mapMembers = useCallback((members = []) => (
         members.map((membership) => {
@@ -63,6 +71,7 @@ function CommitteeMembershipPage() {
             const currentUserId = user?.sub;
             setIsOwner(normalized.some((member) => member.userId === currentUserId && member.role === 'OWNER'));
             setHasChair(normalized.some((member) => member.role === 'CHAIR'));
+            setIsChair(normalized.some((member) => member.userId === currentUserId && member.role === 'CHAIR'));
         } catch (err) {
             console.error(err.message || 'Failed to load committee members');
         } finally {
@@ -73,6 +82,20 @@ function CommitteeMembershipPage() {
     useEffect(() => {
         refreshMembers();
     }, [refreshMembers]);
+
+    useEffect(() => {
+        const fetchCommittee = async () => {
+            if (!committeeId) return;
+            try {
+                const committeeData = await getCommittee(committeeId);
+                setVotingThreshold(committeeData?.votingThreshold || 'MAJORITY');
+            } catch (err) {
+                console.error('Failed to load committee:', err);
+            }
+        };
+
+        fetchCommittee();
+    }, [committeeId, getCommittee]);
 
     const handleEdit = useCallback(async (row) => {
         const nextRole = window.prompt('Enter new role (OWNER, CHAIR, MEMBER)', row.role);
@@ -137,6 +160,17 @@ function CommitteeMembershipPage() {
         }
     }, [addMember, getUserByUsername, refreshMembers]);
 
+    const handleThresholdChange = useCallback(async (newThreshold) => {
+        try {
+            await updateVotingThreshold(committeeId, newThreshold);
+            setVotingThreshold(newThreshold);
+            setThresholdMenuAnchor(null);
+        } catch (err) {
+            console.error('Failed to update voting threshold:', err);
+            window.alert('Failed to update voting threshold. You may need CHAIR role.');
+        }
+    }, [committeeId, updateVotingThreshold]);
+
     const columns = useMemo(() => {
         const baseColumns = [
             { field: 'name', headerName: 'Name', flex: 1, minWidth: 150 },
@@ -183,11 +217,42 @@ function CommitteeMembershipPage() {
             )}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 2 }}>
                 <Typography variant="h5">Membership</Typography>
-                {isOwner && (
-                    <Button variant="contained" startIcon={<PersonAddAltIcon />} onClick={handleAddMember}>
-                        Add Member
-                    </Button>
-                )}
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                    {isChair && (
+                        <>
+                            <Button
+                                variant="outlined"
+                                startIcon={<HowToVoteIcon />}
+                                onClick={(e) => setThresholdMenuAnchor(e.currentTarget)}
+                            >
+                                Voting Threshold: {votingThreshold === 'MAJORITY' ? 'Majority' : 'Supermajority'}
+                            </Button>
+                            <Menu
+                                anchorEl={thresholdMenuAnchor}
+                                open={Boolean(thresholdMenuAnchor)}
+                                onClose={() => setThresholdMenuAnchor(null)}
+                            >
+                                <MenuItem
+                                    onClick={() => handleThresholdChange('MAJORITY')}
+                                    selected={votingThreshold === 'MAJORITY'}
+                                >
+                                    Majority (50% + 1)
+                                </MenuItem>
+                                <MenuItem
+                                    onClick={() => handleThresholdChange('SUPERMAJORITY')}
+                                    selected={votingThreshold === 'SUPERMAJORITY'}
+                                >
+                                    Supermajority (2/3)
+                                </MenuItem>
+                            </Menu>
+                        </>
+                    )}
+                    {isOwner && (
+                        <Button variant="contained" startIcon={<PersonAddAltIcon />} onClick={handleAddMember}>
+                            Add Member
+                        </Button>
+                    )}
+                </Box>
             </Box>
 
             <div style={{ width: '100%' }}>
