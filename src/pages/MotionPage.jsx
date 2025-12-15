@@ -55,6 +55,8 @@ function MotionPage() {
   const { getUsernameById } = useUsersApi();
   const [author, setAuthor] = useState({ username: null });
   const [loadingAuthor, setAuthorLoading] = useState(false);
+  const [debateUserMap, setDebateUserMap] = useState({}); // { [authorId]: { username, loading } }
+  const inFlightRequestsRef = useRef({}); // { [id]: Promise }
   
 
   const polling_interval = 5000;  // 5 seconds - reduced polling frequency for better performance
@@ -151,6 +153,57 @@ function MotionPage() {
   
     return () => { mounted = false; };
   }, [motion, getUsernameById]);
+
+  // Resolve usernames for debate entries; cache results in debateUserMap
+  useEffect(() => {
+    let mounted = true;
+    if (!debates || debates.length === 0) return;
+
+    // collect unique ids that we don't yet have cached
+    const idsToFetch = new Set();
+    debates.forEach((entry) => {
+      const rawId = entry.authorId;
+      const id = rawId && typeof rawId === 'object' ? rawId._id : rawId;
+      if (!id) return;
+      if (!debateUserMap[id]) idsToFetch.add(id);
+    });
+
+    if (idsToFetch.size === 0) return;
+
+    // mark them as loading in one update
+    setDebateUserMap((prev) => {
+      const next = { ...prev };
+      idsToFetch.forEach((id) => {
+        if (!next[id]) next[id] = { username: null, loading: true };
+      });
+      return next;
+    });
+
+    // fetch each id, deduplicating concurrent requests via inFlightRequestsRef
+    idsToFetch.forEach((id) => {
+      if (inFlightRequestsRef.current[id]) return; // already fetching
+
+      const p = (async () => {
+        try {
+          const data = await getUsernameById(id);
+          if (!mounted) return;
+          const username = data && typeof data === 'object' && 'username' in data ? data.username : null;
+          if (!mounted) return;
+          setDebateUserMap((prev) => ({ ...prev, [id]: { username, loading: false } }));
+        } catch (err) {
+          console.error('Failed to fetch debate username for', id, err);
+          if (!mounted) return;
+          setDebateUserMap((prev) => ({ ...prev, [id]: { username: null, loading: false } }));
+        } finally {
+          delete inFlightRequestsRef.current[id];
+        }
+      })();
+
+      inFlightRequestsRef.current[id] = p;
+    });
+
+    return () => { mounted = false; };
+  }, [debates, getUsernameById]);
 
   const handleSecond = async () => {
     if (!motion) return;
@@ -357,12 +410,19 @@ function MotionPage() {
                   {debates.map((entry, i) => (
                     <Paper key={entry._id || i} variant="outlined" sx={{ p: 2, display: 'flex', gap: 2, alignItems: 'flex-start' }}>
                       <Avatar sx={{ bgcolor: (theme) => theme.palette.primary.main, width: 40, height: 40, flexShrink: 0 }}>
-                        {entry.authorId ? String(entry.authorId)[0].toUpperCase() : 'M'}
+                        {entry.authorId ? String(typeof entry.authorId === 'object' ? entry.authorId._id : entry.authorId)[0].toUpperCase() : 'M'}
                       </Avatar>
 
                       <Box sx={{ flex: 1 }}>
                         <Typography variant="caption" color="text.secondary">
-                          {loadingAuthor ? 'Loading...' : (author?.username || 'Member')} · {entry.createdAt ? new Date(entry.createdAt).toLocaleString() : `#${i + 1}`}
+                          {(() => {
+                            const rawId = entry.authorId;
+                            const id = rawId && typeof rawId === 'object' ? rawId._id : rawId;
+                            const mapEntry = id ? debateUserMap[id] : null;
+                            if (mapEntry && mapEntry.loading) return 'Loading...';
+                            if (mapEntry && mapEntry.username) return mapEntry.username;
+                            return 'Member';
+                          })()} · {entry.createdAt ? new Date(entry.createdAt).toLocaleString() : `#${i + 1}`}
                           
                           {entry.position && (
                             <Chip 
