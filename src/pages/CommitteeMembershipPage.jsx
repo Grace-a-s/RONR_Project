@@ -9,6 +9,7 @@ import Button from '@mui/material/Button';
 import Alert from '@mui/material/Alert';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import PersonAddAltIcon from '@mui/icons-material/PersonAddAlt';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useAuth0 } from '@auth0/auth0-react';
@@ -147,6 +148,12 @@ function CommitteeMembershipPage() {
                 editable: isOwner,
                 type: 'singleSelect',
                 valueOptions: ROLE_OPTIONS,
+                renderCell: (params) => (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <span>{params.value}</span>
+                        {isOwner && <ArrowDropDownIcon fontSize="small" color="action" />}
+                    </Box>
+                ),
             },
         ];
 
