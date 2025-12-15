@@ -86,7 +86,31 @@ export async function getAllVotes(user, motionId) {
 			return new Response(JSON.stringify({ error: 'Invalid motionId' }), { status: 400, headers: { 'content-type': 'application/json' } });
 		}
 
+		// Fetch the motion to get committeeId
+		const motion = await Motion.findById(motionId).lean();
+		if (!motion) {
+			return new Response(JSON.stringify({ error: 'Motion not found' }), { status: 404, headers: { 'content-type': 'application/json' } });
+		}
+
+		// Fetch committee to check anonymous voting setting
+		const committee = await Committee.findById(motion.committeeId).lean();
+		const isAnonymous = committee?.anonymousVoting || false;
+
 		const votes = await Vote.find({ motionId }).sort({ createdAt: -1 }).lean();
+
+		// If anonymous mode is enabled, filter out identifying information
+		if (isAnonymous) {
+			const filteredVotes = votes.map(vote => ({
+				_id: vote._id,
+				motionId: vote.motionId,
+				authorId: vote.authorId,  // Keep for user's own vote identification
+				position: vote.position,
+				// Omit createdAt and updatedAt to prevent identification
+			}));
+			return new Response(JSON.stringify(filteredVotes), { status: 200, headers: { 'content-type': 'application/json' } });
+		}
+
+		// Public mode - return all data
 		return new Response(JSON.stringify(votes), { status: 200, headers: { 'content-type': 'application/json' } });
 	} catch (err) {
 		return new Response(JSON.stringify({ error: err.toString() }), { status: 400, headers: { 'content-type': 'application/json' } });

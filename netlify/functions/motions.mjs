@@ -3,7 +3,7 @@
 import { connectDatabase } from "./utils/db.mjs";
 import { createRouter } from './utils/router.mjs';
 import { createDebate, getAllDebates } from './controller/debateController.mjs';
-import { approveMotion, createMotion, getAllMotions, getMotionById, openVote, secondMotion } from './controller/motionController.mjs';
+import { approveMotion, createMotion, getAllMotions, getMotionById, openVote, secondMotion, checkReproposeEligibility, reproposeMotion } from './controller/motionController.mjs';
 import { createVote, getAllVotes } from './controller/voteController.mjs';
 import { authGuard } from './utils/guard.mjs';
 import Motion from './model/Motion.mjs';
@@ -89,6 +89,26 @@ router.post('/motions/:id/chair/open-vote', async ({req, params}) => {
   const { user, error } = await authGuard(req, ['CHAIR'], committeeId);
   if (error) return error;
   return openVote(user, motionId);
+});
+
+router.get('/motions/:id/repropose/check', async ({req, params}) => {
+  // Check if user can re-propose a rejected motion
+  const { user, error } = await authGuard(req);
+  if (error) return error;
+  return checkReproposeEligibility(user, params.id);
+});
+
+router.post('/motions/:id/repropose', async ({req, params}) => {
+  // Re-propose a rejected motion (requires OPPOSE vote and committee membership)
+  const motionId = params.id;
+  const motion = await Motion.findById(motionId).lean();
+  if (!motion) {
+    return new Response(JSON.stringify({ error: 'Motion not found' }), { status: 404, headers: { 'content-type': 'application/json' } });
+  }
+  const committeeId = motion.committeeId;
+  const { user, error } = await authGuard(req, ['OWNER', 'MEMBER'], committeeId);
+  if (error) return error;
+  return reproposeMotion(user, motionId);
 });
 
 
