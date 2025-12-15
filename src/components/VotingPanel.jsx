@@ -84,7 +84,13 @@ function VotingPanel({ open, onClose, motion, committee, onVoteSuccess }) {
     try {
       const token = await getAccessTokenSilently();
       const memberships = await getCommitteeMemberCount(motion.committeeId, token);
-      setTotalMembers(Array.isArray(memberships) ? memberships.length : 0);
+      if (Array.isArray(memberships)) {
+        // Exclude non-voting members (CHAIR role) from the total
+        const votingMembers = memberships.filter((m) => String(m?.role || '').toUpperCase() !== 'CHAIR');
+        setTotalMembers(votingMembers.length);
+      } else {
+        setTotalMembers(0);
+      }
     } catch (error) {
       console.error('Failed to fetch member count:', error);
     }
