@@ -1,9 +1,10 @@
 import Vote from '../model/Vote.mjs';
 import Motion from '../model/Motion.mjs';
 import Membership from '../model/Membership.mjs';
+import Committee from '../model/Committee.mjs';
 import mongoose from 'mongoose';
 
-// Helper: tally votes for a motion and update motion status if 2/3 threshold reached
+// Helper: tally votes for a motion and update motion status if threshold reached
 async function tallyAndApplyTwoThirds(motion) {
 	if (!motion) return null;
 	const motionId = motion._id;
@@ -12,10 +13,17 @@ async function tallyAndApplyTwoThirds(motion) {
 	const memberCount = await Membership.countDocuments({ committeeId });
 	if (memberCount <= 0) return null;
 
+	// Fetch committee to get voting threshold
+	const committee = await Committee.findById(committeeId).lean();
+	const votingThreshold = committee?.votingThreshold || 'MAJORITY';
+
 	const supportCount = await Vote.countDocuments({ motionId, position: 'SUPPORT' });
 	const opposeCount = await Vote.countDocuments({ motionId, position: 'OPPOSE' });
 
-	const threshold = Math.ceil((memberCount * 2) / 3);
+	// Calculate threshold based on committee setting
+	const threshold = votingThreshold === 'SUPERMAJORITY'
+		? Math.ceil((memberCount * 2) / 3)
+		: Math.floor(memberCount / 2) + 1;
 
 	if (supportCount >= threshold) {
 		return await Motion.findByIdAndUpdate(motionId, { status: 'PASSED' }, { new: true }).lean();

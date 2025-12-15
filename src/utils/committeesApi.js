@@ -20,10 +20,17 @@ export const useCommitteesApi = () => {
     return api.patch(withId(committeeId), payload);
   }, [api]);
 
+  const updateVotingThreshold = useCallback((committeeId, votingThreshold) => {
+    if (!committeeId) throw new Error('committeeId is required');
+    if (!votingThreshold) throw new Error('votingThreshold is required');
+    return api.patch(`${withId(committeeId)}/voting-threshold`, { votingThreshold });
+  }, [api]);
+
   return {
     listCommittees,
     createCommittee,
     getCommittee,
     updateCommittee,
+    updateVotingThreshold,
   };
 };

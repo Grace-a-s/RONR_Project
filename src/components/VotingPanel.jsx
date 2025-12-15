@@ -21,7 +21,7 @@ import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import { castVote, getVotes, getCommitteeMemberCount } from '../lib/api';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
 
-function VotingPanel({ open, onClose, motion, onVoteSuccess }) {
+function VotingPanel({ open, onClose, motion, committee, onVoteSuccess }) {
   const { user, getAccessTokenSilently } = useAuth0();
   const [votes, setVotes] = useState([]);
   const [userVote, setUserVote] = useState(null);
@@ -33,6 +33,9 @@ function VotingPanel({ open, onClose, motion, onVoteSuccess }) {
   const [opposeCount, setOpposeCount] = useState(0);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
 
+  const committeeThreshold = committee?.votingThreshold || 'MAJORITY';
+
+  useEffect(() => {
    const polling_interval = 3000; 
 
   useAutoRefresh(() => {
@@ -99,7 +102,12 @@ function VotingPanel({ open, onClose, motion, onVoteSuccess }) {
     }
   };
 
-  const threshold = Math.ceil((totalMembers * 2) / 3);
+  const threshold = committeeThreshold === "SUPERMAJORITY"
+    ? Math.ceil((totalMembers * 2) / 3)
+    : Math.floor(totalMembers / 2) + 1;
+  const thresholdText = committeeThreshold === "SUPERMAJORITY" ? "2/3" : "majority";
+  const thresholdDescription = committeeThreshold === "SUPERMAJORITY" ? "2/3" : "majority";
+
   const supportProgress = totalMembers > 0 ? (supportCount / threshold) * 100 : 0;
   const opposeProgress = totalMembers > 0 ? (opposeCount / threshold) * 100 : 0;
   const totalVotesCast = supportCount + opposeCount;
@@ -136,7 +144,7 @@ function VotingPanel({ open, onClose, motion, onVoteSuccess }) {
               Vote Progress
             </Typography>
             <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
-              Bars show progress toward 2/3 threshold • Percentages show vote distribution
+              Bars show progress toward {thresholdText} threshold • Percentages show vote distribution
             </Typography>
 
             <Box sx={{ mt: 2 }}>
@@ -186,7 +194,7 @@ function VotingPanel({ open, onClose, motion, onVoteSuccess }) {
             </Box>
 
             <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block' }}>
-              Total members: {totalMembers} • Need {threshold} votes (2/3) to pass
+              Total members: {totalMembers} • Need {threshold} votes ({thresholdDescription}) to pass
             </Typography>
           </Box>
 

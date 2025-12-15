@@ -119,3 +119,34 @@ export async function updateCommitteeById(user, committeeId, body) {
         return new Response(JSON.stringify({ error: err.toString() }), { status: 400, headers: { 'content-type': 'application/json' } });
     }
 }
+
+export async function updateVotingThreshold(user, committeeId, body) {
+    try {
+        if (!committeeId || !mongoose.Types.ObjectId.isValid(committeeId)) {
+            return new Response(JSON.stringify({ error: 'Invalid committee id' }), { status: 400, headers: { 'content-type': 'application/json' } });
+        }
+
+        const { votingThreshold } = body || {};
+        if (!votingThreshold) {
+            return new Response(JSON.stringify({ error: 'votingThreshold required' }), { status: 400, headers: { 'content-type': 'application/json' } });
+        }
+
+        if (!['MAJORITY', 'SUPERMAJORITY'].includes(votingThreshold)) {
+            return new Response(JSON.stringify({ error: 'votingThreshold must be MAJORITY or SUPERMAJORITY' }), { status: 400, headers: { 'content-type': 'application/json' } });
+        }
+
+        const updated = await Committee.findByIdAndUpdate(
+            committeeId,
+            { votingThreshold },
+            { new: true }
+        ).lean();
+
+        if (!updated) {
+            return new Response(JSON.stringify({ error: 'Committee not found' }), { status: 404, headers: { 'content-type': 'application/json' } });
+        }
+
+        return new Response(JSON.stringify(updated), { status: 200, headers: { 'content-type': 'application/json' } });
+    } catch (err) {
+        return new Response(JSON.stringify({ error: err.toString() }), { status: 400, headers: { 'content-type': 'application/json' } });
+    }
+}
