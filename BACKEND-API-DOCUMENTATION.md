@@ -217,7 +217,7 @@ retrieve the username of user (based on ID, the unique identifier for user entri
 
 **Authentication** Not required
 
-**Response**
+**Response (200)**
 ```json
 {"username": "johndoe"}
 ```
