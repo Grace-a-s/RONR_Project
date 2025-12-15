@@ -210,6 +210,16 @@ Retrieves a user's public profile by username.
 - `404 Not Found` - User not found
 
 ---
+### Get Username by ID
+retrieve the username of user (based on ID, the unique identifier for user entries)
+
+**EndPoint**: GET: /users/id/:id
+**Authentication** Not required
+**Response**
+'''JSON {"username": "johndoe"}'''
+**Error Response**
+- '400 Bad Request' - id required
+- '404 Not Found' - User not found
 
 ## Committee Endpoints
 
