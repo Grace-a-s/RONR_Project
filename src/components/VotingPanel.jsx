@@ -36,10 +36,10 @@ function VotingPanel({ open, onClose, motion, committee, onVoteSuccess }) {
 
   const committeeThreshold = committee?.votingThreshold || 'MAJORITY';
 
-  const committeeThreshold = committee?.votingThreshold || 'MAJORITY';
+  //const committeeThreshold = committee?.votingThreshold || 'MAJORITY';
 
-  useEffect(() => {
-   const polling_interval = 3000; 
+  //useEffect(() => {
+  const polling_interval = 3000; 
 
   useAutoRefresh(() => {
     if (open && motion) {
