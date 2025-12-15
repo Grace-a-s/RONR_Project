@@ -18,14 +18,15 @@ function MotionDetailsCard({ motion = {}, onClick }) {
             case 'DEBATE':
                 return { sx: { bgcolor: '#FF57BB', ...lightText } };
             case 'VOTING':
-                return { sx: { bgcolor: '#38A3A5', ...lightText } };
+                return { sx: { bgcolor: '#22577A', ...lightText } };
             case 'PASSED':
                 return { sx: { bgcolor: '#57CC99', ...darkText } };
             case 'SECONDED':
-                return { sx: { bgcolor: '#C7F9CC', ...darkText } };
+                return { sx: { bgcolor: '#38A3A5', ...darkText } };
             case 'REJECTED':
                 return { sx: { bgcolor: '#9e9e9e', ...darkText } };
             case 'PROPOSED':
+                return {sx: {bgcolor: '#85D4D5', ...darkText}};
             case 'PENDING':
             default:
                 return { sx: {} };
