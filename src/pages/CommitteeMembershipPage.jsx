@@ -19,15 +19,8 @@ import { useAuth0 } from '@auth0/auth0-react';
 import { useMembershipsApi } from '../utils/membershipsApi';
 import { useUsersApi } from '../utils/usersApi';
 import { useCommitteesApi } from '../utils/committeesApi';
-
-const ROLE_OPTIONS = ['OWNER', 'CHAIR', 'MEMBER'];
-
-const formatName = (userInfo = {}) => {
-    const first = userInfo.firstName || '';
-    const last = userInfo.lastName || '';
-    const full = `${first} ${last}`.trim();
-    return full || userInfo.username || userInfo.email || userInfo._id || 'Unknown user';
-};
+import ConfirmDialog from '../components/ConfirmDialog';
+import AddMemberDialog from '../components/AddMemberDialog';
 
 function CommitteeMembershipPage() {
     const { committeeId } = useParams();
@@ -46,6 +39,9 @@ function CommitteeMembershipPage() {
     const [anonymousVoting, setAnonymousVoting] = useState(false);
     const [thresholdMenuAnchor, setThresholdMenuAnchor] = useState(null);
 
+    const [confirmDialog, setConfirmDialog] = useState({ open: false, title: 'Confirm', message: '', onConfirm: null });
+    const [addMemberDialog, setAddMemberDialog] = useState({ open: false });
+
     const mapMembers = useCallback((members = []) => (
         members.map((membership) => {
             const userInfo = (membership && typeof membership.userId === 'object') ? membership.userId : { _id: membership?.userId };
@@ -54,7 +50,7 @@ function CommitteeMembershipPage() {
                 id: membership?._id || `${membership?.committeeId}-${userId}`,
                 membershipId: membership?._id || null,
                 userId,
-                name: formatName(userInfo),
+                name: userInfo.username,
                 email: userInfo?.email || '—',
                 role: membership?.role || 'MEMBER',
             };
@@ -102,66 +98,80 @@ function CommitteeMembershipPage() {
         fetchCommittee();
     }, [committeeId, getCommittee]);
 
-    const handleEdit = useCallback(async (row) => {
-        const nextRole = window.prompt('Enter new role (OWNER, CHAIR, MEMBER)', row.role);
-        if (!nextRole) return;
-        const normalizedRole = nextRole.trim().toUpperCase();
-        if (!ROLE_OPTIONS.includes(normalizedRole)) {
-            window.alert('Invalid role. Please enter OWNER, CHAIR, or MEMBER.');
-            return;
-        }
-        if (normalizedRole === row.role) return;
+    useEffect(() => {
+        const fetchCommittee = async () => {
+            if (!committeeId) return;
+            try {
+                const committeeData = await getCommittee(committeeId);
+                setVotingThreshold(committeeData?.votingThreshold || 'MAJORITY');
+                setAnonymousVoting(committeeData?.anonymousVoting || false);
+            } catch (err) {
+                console.error('Failed to load committee:', err);
+            }
+        };
+
+        fetchCommittee();
+    }, [committeeId, getCommittee]);
+
+    const handleRoleChange = useCallback(async (userId, newRole, oldRole) => {
+        if (newRole === oldRole) return;
         try {
-            await updateMemberRole({ userId: row.userId, role: normalizedRole });
+            await updateMemberRole({ userId, role: newRole });
             await refreshMembers();
         } catch (err) {
-            console.error(err.message || 'Failed to update role');
+            console.err("Failed to update role", err.message);
         }
     }, [refreshMembers, updateMemberRole]);
 
     const handleRemove = useCallback(async (row) => {
-        if (!window.confirm(`Remove ${row.name} from this committee?`)) return;
-        try {
-            await removeMember({ userId: row.userId });
-            await refreshMembers();
-        } catch (err) {
-            console.error(err.message || 'Failed to remove member');
-        }
-    }, [refreshMembers, removeMember]);
+        setConfirmDialog({
+            open: true,
+            title: 'Remove Member',
+            message: (
+                <span>
+                    Are you sure you want to remove <strong>{row.name}</strong> from this committee?
+                </span>
+            ),
+            cancelLabel: 'Cancel',
+            confirmLabel: 'Remove',
+            isDangerous: true,
+            onConfirm: async () => {
+                setConfirmDialog({ ...confirmDialog, open: false });
+                try {
+                    await removeMember({ userId: row.userId });
+                    await refreshMembers();
+                } catch (err) {
+                    console.error('Failed to remove member', err);
+                }
+            }
+        });
+    }, [refreshMembers, removeMember, confirmDialog]);
 
-    const handleAddMember = useCallback(async () => {
-        const usernameInput = window.prompt('Enter the username to add to this committee');
-        if (!usernameInput) return;
-        const trimmedUsername = usernameInput.trim();
-        if (!trimmedUsername) return;
+    const handleAddMember = useCallback(() => {
+        setAddMemberDialog({ open: true });
+    }, []);
 
+    const handleAddMemberSubmit = useCallback(async (username, role) => {
+        setAddMemberDialog({ open: false });
+        
         let userRecord;
         try {
-            userRecord = await getUserByUsername(trimmedUsername);
+            userRecord = await getUserByUsername(username);
         } catch (err) {
-            console.error(err?.message || 'Failed to look up user by username');
-            window.alert(msg);
+            console.error("Failed to add member", err.message);
             return;
         }
 
         if (!userRecord || !userRecord._id) {
-            window.alert('User not found or missing identifier.');
-            return;
-        }
-
-        const roleInput = window.prompt('Enter role for this member (OWNER, CHAIR, MEMBER)', 'MEMBER');
-        if (!roleInput) return;
-        const normalizedRole = roleInput.trim().toUpperCase();
-        if (!ROLE_OPTIONS.includes(normalizedRole)) {
-            window.alert('Invalid role. Please enter OWNER, CHAIR, or MEMBER.');
+            console.error("Failed to add member", err.message);
             return;
         }
 
         try {
-            await addMember({ userId: userRecord._id, role: normalizedRole });
+            await addMember({ userId: userRecord._id, role });
             await refreshMembers();
         } catch (err) {
-            console.error(err.message || 'Failed to add member');
+            console.error("Failed to add member", err.message);
         }
     }, [addMember, getUserByUsername, refreshMembers]);
 
@@ -187,14 +197,19 @@ function CommitteeMembershipPage() {
         }
     }, [committeeId, updateAnonymousVoting]);
 
+    const ROLE_OPTIONS = ['OWNER', 'CHAIR', 'MEMBER'];
+
     const columns = useMemo(() => {
         const baseColumns = [
-            { field: 'name', headerName: 'Name', flex: 1, minWidth: 150 },
+            { field: 'name', headerName: 'Username', flex: 1, minWidth: 150 },
             { field: 'email', headerName: 'Email', flex: 1, minWidth: 200 },
             {
                 field: 'role',
                 headerName: 'Role',
                 width: 140,
+                editable: isOwner,
+                type: 'singleSelect',
+                valueOptions: ROLE_OPTIONS,
             },
         ];
 
@@ -205,16 +220,13 @@ function CommitteeMembershipPage() {
             ...baseColumns,
             {
                 field: 'actions',
-                headerName: 'Actions',
-                width: 120,
+                headerName: '',
+                width: 80,
                 sortable: false,
                 filterable: false,
                 disableColumnMenu: true,
                 renderCell: (params) => (
                     <Box>
-                        <IconButton size="small" onClick={() => handleEdit(params.row)} aria-label="edit role">
-                            <EditIcon fontSize="small" />
-                        </IconButton>
                         <IconButton size="small" onClick={() => handleRemove(params.row)} aria-label="remove member">
                             <DeleteIcon fontSize="small" />
                         </IconButton>
@@ -222,7 +234,7 @@ function CommitteeMembershipPage() {
                 ),
             },
         ];
-    }, [handleEdit, handleRemove, isOwner]);
+    }, [handleRemove, isOwner]);
 
     return (
         <Paper sx={{ m: 5, p: 3 }}>
@@ -314,9 +326,36 @@ function CommitteeMembershipPage() {
                         disableRowSelectionOnClick
                         pageSizeOptions={[5, 10]}
                         initialState={{ pagination: { paginationModel: { pageSize: 5 } } }}
+                        processRowUpdate={async (newRow, oldRow) => {
+                            if (newRow.role !== oldRow.role) {
+                                await handleRoleChange(newRow.userId, newRow.role, oldRow.role);
+                            }
+                            return newRow;
+                        }}
+                        onProcessRowUpdateError={(error) => {
+                            console.error('Failed to update role:', error);
+                        }}
                     />
                 </div>
             </div>
+
+            <ConfirmDialog
+                open={confirmDialog.open}
+                onClose={() => setConfirmDialog({ ...confirmDialog, open: false })}
+                onConfirm={confirmDialog.onConfirm || (() => {})}
+                title={confirmDialog.title}
+                message={confirmDialog.message}
+                cancelLabel={confirmDialog.cancelLabel}
+                confirmLabel={confirmDialog.confirmLabel}
+                isDangerous={confirmDialog.isDangerous}
+            />
+
+            <AddMemberDialog
+                open={addMemberDialog.open}
+                onClose={() => setAddMemberDialog({ open: false })}
+                onSubmit={handleAddMemberSubmit}
+                getUserByUsername={getUserByUsername}
+            />
         </Paper>
     );
 }
