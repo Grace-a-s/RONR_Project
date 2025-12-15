@@ -214,9 +214,14 @@ Retrieves a user's public profile by username.
 retrieve the username of user (based on ID, the unique identifier for user entries)
 
 **EndPoint**: GET: /users/id/:id
+
 **Authentication** Not required
+
 **Response**
-'''JSON {"username": "johndoe"}'''
+```json
+{"username": "johndoe"}
+```
+
 **Error Response**
 - '400 Bad Request' - id required
 - '404 Not Found' - User not found
