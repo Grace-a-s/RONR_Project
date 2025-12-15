@@ -9,6 +9,7 @@ import Button from '@mui/material/Button';
 import Alert from '@mui/material/Alert';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
+import Divider from '@mui/material/Divider';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import PersonAddAltIcon from '@mui/icons-material/PersonAddAlt';
@@ -32,7 +33,7 @@ function CommitteeMembershipPage() {
     const { user } = useAuth0();
     const { listMembers, addMember, removeMember, updateMemberRole } = useMembershipsApi(committeeId);
     const { getUserByUsername } = useUsersApi();
-    const { getCommittee, updateVotingThreshold } = useCommitteesApi();
+    const { getCommittee, updateVotingThreshold, updateAnonymousVoting } = useCommitteesApi();
 
     const [rows, setRows] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -40,6 +41,7 @@ function CommitteeMembershipPage() {
     const [hasChair, setHasChair] = useState(true);
     const [isChair, setIsChair] = useState(false);
     const [votingThreshold, setVotingThreshold] = useState('MAJORITY');
+    const [anonymousVoting, setAnonymousVoting] = useState(false);
     const [thresholdMenuAnchor, setThresholdMenuAnchor] = useState(null);
 
     const mapMembers = useCallback((members = []) => (
@@ -89,6 +91,7 @@ function CommitteeMembershipPage() {
             try {
                 const committeeData = await getCommittee(committeeId);
                 setVotingThreshold(committeeData?.votingThreshold || 'MAJORITY');
+                setAnonymousVoting(committeeData?.anonymousVoting || false);
             } catch (err) {
                 console.error('Failed to load committee:', err);
             }
@@ -171,6 +174,17 @@ function CommitteeMembershipPage() {
         }
     }, [committeeId, updateVotingThreshold]);
 
+    const handleAnonymousVotingChange = useCallback(async (newValue) => {
+        try {
+            await updateAnonymousVoting(committeeId, newValue);
+            setAnonymousVoting(newValue);
+            setThresholdMenuAnchor(null);
+        } catch (err) {
+            console.error('Failed to update anonymous voting:', err);
+            window.alert('Failed to update anonymous voting setting. You may need CHAIR role.');
+        }
+    }, [committeeId, updateAnonymousVoting]);
+
     const columns = useMemo(() => {
         const baseColumns = [
             { field: 'name', headerName: 'Name', flex: 1, minWidth: 150 },
@@ -225,13 +239,16 @@ function CommitteeMembershipPage() {
                                 startIcon={<HowToVoteIcon />}
                                 onClick={(e) => setThresholdMenuAnchor(e.currentTarget)}
                             >
-                                Voting Threshold: {votingThreshold === 'MAJORITY' ? 'Majority' : 'Supermajority'}
+                                Voting Settings
                             </Button>
                             <Menu
                                 anchorEl={thresholdMenuAnchor}
                                 open={Boolean(thresholdMenuAnchor)}
                                 onClose={() => setThresholdMenuAnchor(null)}
                             >
+                                <Typography variant="caption" sx={{ px: 2, py: 1, color: 'text.secondary' }}>
+                                    VOTING THRESHOLD
+                                </Typography>
                                 <MenuItem
                                     onClick={() => handleThresholdChange('MAJORITY')}
                                     selected={votingThreshold === 'MAJORITY'}
@@ -243,6 +260,22 @@ function CommitteeMembershipPage() {
                                     selected={votingThreshold === 'SUPERMAJORITY'}
                                 >
                                     Supermajority (2/3)
+                                </MenuItem>
+                                <Divider sx={{ my: 1 }} />
+                                <Typography variant="caption" sx={{ px: 2, py: 1, color: 'text.secondary' }}>
+                                    VOTE VISIBILITY
+                                </Typography>
+                                <MenuItem
+                                    onClick={() => handleAnonymousVotingChange(false)}
+                                    selected={!anonymousVoting}
+                                >
+                                    Public Votes
+                                </MenuItem>
+                                <MenuItem
+                                    onClick={() => handleAnonymousVotingChange(true)}
+                                    selected={anonymousVoting}
+                                >
+                                    Anonymous Votes
                                 </MenuItem>
                             </Menu>
                         </>

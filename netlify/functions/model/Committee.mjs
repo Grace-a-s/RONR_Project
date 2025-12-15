@@ -13,6 +13,11 @@ const committeeSchema = new Schema({
     enum: ["MAJORITY", "SUPERMAJORITY"],
     default: "MAJORITY",
     required: true
+  },
+  anonymousVoting: {
+    type: Boolean,
+    default: false,
+    required: true
   }
 }, {
   timestamps: true

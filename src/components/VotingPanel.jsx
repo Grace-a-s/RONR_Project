@@ -30,6 +30,7 @@ function VotingPanel({ open, onClose, motion, committee, onVoteSuccess }) {
   const [supportCount, setSupportCount] = useState(0);
   const [opposeCount, setOpposeCount] = useState(0);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
+  const [isAnonymous, setIsAnonymous] = useState(false);
 
   const committeeThreshold = committee?.votingThreshold || 'MAJORITY';
 
@@ -57,12 +58,17 @@ function VotingPanel({ open, onClose, motion, committee, onVoteSuccess }) {
 
       const myVote = validVotes.find(v => v.authorId === user.sub);
       setUserVote(myVote);
+
+      // Check if anonymous mode is enabled (based on whether timestamps are present)
+      // If first vote has no createdAt, we're in anonymous mode
+      setIsAnonymous(validVotes.length > 0 && !validVotes[0].createdAt);
     } catch (error) {
       // On error, reset to empty state
       setVotes([]);
       setSupportCount(0);
       setOpposeCount(0);
       setUserVote(null);
+      setIsAnonymous(false);
       console.error('Failed to fetch votes:', error);
       setSnackbar({ open: true, message: error.message || 'Failed to fetch votes', severity: 'error' });
     } finally {
@@ -203,9 +209,11 @@ function VotingPanel({ open, onClose, motion, committee, onVoteSuccess }) {
               <Typography variant="body2" sx={{ fontWeight: 600 }}>
                 You voted: {userVote.position}
               </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {new Date(userVote.createdAt).toLocaleString()}
-              </Typography>
+              {!isAnonymous && (
+                <Typography variant="caption" color="text.secondary">
+                  {new Date(userVote.createdAt).toLocaleString()}
+                </Typography>
+              )}
             </Box>
           ) : motion?.status === 'VOTING' ? (
             <Box sx={{ mb: 3 }}>
@@ -257,12 +265,15 @@ function VotingPanel({ open, onClose, motion, committee, onVoteSuccess }) {
               variant="outlined"
               endIcon={showVotes ? <ExpandLessIcon /> : <ExpandMoreIcon />}
               onClick={() => setShowVotes(!showVotes)}
+              disabled={isAnonymous}
               sx={{ mb: 2 }}
             >
-              {showVotes ? 'Hide Votes' : 'Show Votes'} ({votes.length})
+              {isAnonymous
+                ? `Votes Hidden (${votes.length})`
+                : (showVotes ? 'Hide Votes' : 'Show Votes') + ` (${votes.length})`}
             </Button>
 
-            {showVotes && (
+            {showVotes && !isAnonymous && (
               <List>
                 {votes.map((vote, index) => (
                   <ListItem key={index} divider>
