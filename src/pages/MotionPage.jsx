@@ -291,6 +291,18 @@ function MotionPage() {
   const isDebateStatus = motion && motion.status === 'DEBATE';
   const isDebateOrLater = motion && ['DEBATE', 'VOTING', 'PASSED', 'REJECTED'].includes(motion.status);
   const isVotingOrLater = motion && ['VOTING', 'PASSED', 'REJECTED'].includes(motion.status);
+
+  // Determine whether the first N debate entries have resolved usernames
+  const debateInitialBatchSize = Math.min(5, debates.length);
+  const isInitialDebateBatchReady = debateInitialBatchSize === 0
+    ? true
+    : debates.slice(0, debateInitialBatchSize).every((entry) => {
+        const rawId = entry.authorId;
+        const id = rawId && typeof rawId === 'object' ? rawId._id : rawId;
+        const mapEntry = id ? debateUserMap[id] : null;
+        return mapEntry && mapEntry.loading === false;
+      });
+      
   if (loading) return <Container sx={{ py: 6 }}><Typography>Loading...</Typography></Container>;
   if (!motion) return <Container sx={{ py: 6 }}><Typography>Motion not found</Typography></Container>;
 
@@ -407,45 +419,48 @@ function MotionPage() {
                 <Typography variant="subtitle1" gutterBottom>Debate</Typography>
 
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: { xs: '240px', md: '360px' }, overflow: 'auto', pr: 1, pb: { xs: '140px', md: '100px' } }}>
-                  {debates.map((entry, i) => (
-                    <Paper key={entry._id || i} variant="outlined" sx={{ p: 2, display: 'flex', gap: 2, alignItems: 'flex-start' }}>
-                      <Avatar sx={{ bgcolor: (theme) => theme.palette.primary.main, width: 40, height: 40, flexShrink: 0 }}>
-                        {entry.authorId ? String(typeof entry.authorId === 'object' ? entry.authorId._id : entry.authorId)[0].toUpperCase() : 'M'}
-                      </Avatar>
-
-                      <Box sx={{ flex: 1 }}>
-                        <Typography variant="caption" color="text.secondary">
-                          {(() => {
-                            const rawId = entry.authorId;
-                            const id = rawId && typeof rawId === 'object' ? rawId._id : rawId;
-                            const mapEntry = id ? debateUserMap[id] : null;
-                            if (mapEntry && mapEntry.loading) return 'Loading...';
-                            if (mapEntry && mapEntry.username) return mapEntry.username;
-                            return 'Member';
-                          })()} · {entry.createdAt ? new Date(entry.createdAt).toLocaleString() : `#${i + 1}`}
-                          
-                          {entry.position && (
-                            <Chip 
-                              label={entry.position} 
-                              size="small" 
-                              sx={{ ml: 1 }}
-                              color={
-                                entry.position === 'SUPPORT' ? 'success' :
-                                entry.position === 'OPPOSE' ? 'error' :
-                                'default'
-                              }
-                            />
-                          )}
-                        </Typography>
-
-                        <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', mt: 1 }}>
-                          {entry.content}
-                        </Typography>
-                      </Box>
-                    </Paper>
-                  ))}
-                  {debates.length === 0 && (
+                  {debates.length > 0 && !isInitialDebateBatchReady ? (
+                    <Typography color="text.secondary" align="center">Loading...</Typography>
+                  ) : debates.length === 0 ? (
                     <Typography color="text.secondary" align="center">No debate entries yet.</Typography>
+                  ) : (
+                    debates.map((entry, i) => (
+                      <Paper key={entry._id || i} variant="outlined" sx={{ p: 2, display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+                        <Avatar sx={{ bgcolor: (theme) => theme.palette.primary.main, width: 40, height: 40, flexShrink: 0 }}>
+                          {entry.authorId ? String(typeof entry.authorId === 'object' ? entry.authorId._id : entry.authorId)[0].toUpperCase() : 'M'}
+                        </Avatar>
+
+                        <Box sx={{ flex: 1 }}>
+                          <Typography variant="caption" color="text.secondary">
+                            {(() => {
+                              const rawId = entry.authorId;
+                              const id = rawId && typeof rawId === 'object' ? rawId._id : rawId;
+                              const mapEntry = id ? debateUserMap[id] : null;
+                              if (mapEntry && mapEntry.loading) return 'Loading...';
+                              if (mapEntry && mapEntry.username) return mapEntry.username;
+                              return 'Member';
+                            })()} · {entry.createdAt ? new Date(entry.createdAt).toLocaleString() : `#${i + 1}`}
+                            
+                            {entry.position && (
+                              <Chip 
+                                label={entry.position} 
+                                size="small" 
+                                sx={{ ml: 1 }}
+                                color={
+                                  entry.position === 'SUPPORT' ? 'success' :
+                                  entry.position === 'OPPOSE' ? 'error' :
+                                  'default'
+                                }
+                              />
+                            )}
+                          </Typography>
+
+                          <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', mt: 1 }}>
+                            {entry.content}
+                          </Typography>
+                        </Box>
+                      </Paper>
+                    ))
                   )}
                 </Box>
               </Paper>
