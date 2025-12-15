@@ -37,6 +37,16 @@ export const useMotionsApi = () => {
     return api.post(`${motionPath(motionId)}/debate`, payload);
   }, [api]);
 
+  const reproposeMotion = useCallback((motionId) => {
+    if (!motionId) throw new Error('motionId is required');
+    return api.post(`${motionPath(motionId)}/repropose`, {});
+  }, [api]);
+
+  const checkReproposeEligibility = useCallback((motionId) => {
+    if (!motionId) throw new Error('motionId is required');
+    return api.get(`${motionPath(motionId)}/repropose/check`);
+  }, [api]);
+
   return {
     listMotions,
     createMotion,
@@ -44,5 +54,7 @@ export const useMotionsApi = () => {
     secondMotion,
     getDebates,
     createDebate,
+    reproposeMotion,
+    checkReproposeEligibility,
   };
 };
