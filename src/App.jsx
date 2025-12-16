@@ -9,6 +9,7 @@ import { useAuth0 } from "@auth0/auth0-react";
 import UserProfilePage from './pages/UserProfilePage.jsx';
 import LandingPage from './pages/LandingPage.jsx';
 import CommitteeMembershipPage from './pages/CommitteeMembershipPage.jsx';
+import UserRolesPage from './pages/UserRolesPage.jsx';
 
 function App() {
   const RequireAuth = ({ children }) => {
@@ -34,6 +35,7 @@ function App() {
             <Route path="/committee/:committeeId/motion/:motionId" element={<MotionPage />} />
             <Route path="/committee/:committeeId" element={<CommitteePage />} />
             <Route path="/user-profile" element={<UserProfilePage/>} />
+            <Route path="/user-roles" element={<UserRolesPage />} />
             <Route path="/committee/:committeeId/membership" element={<CommitteeMembershipPage />} />
           </Routes>
         </Auth0ProviderWithNavigate>
