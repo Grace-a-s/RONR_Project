@@ -432,17 +432,8 @@ function MotionPage() {
                 <Typography variant="h5">{motion.title}</Typography>
                 <Chip
                   label={motion.status || 'PROPOSED'}
-                  color={
-                    motion.status === 'VOTING' ? 'primary' :
-                    motion.status === 'PASSED' ? 'success' :
-                    motion.status === 'REJECTED' ? 'error' :
-                    motion.status === 'DEBATE' ? 'warning' :
-                    motion.status === 'VETOED' ? 'error' :
-                    motion.status === 'CHALLENGING_VETO' ? 'warning' :
-                    motion.status === 'VETO_CONFIRMED' ? 'error' :
-                    'default'
-                  }
-                  sx={{ fontWeight: 600 }}
+                  {...getChipSxForStatus(motion.status || 'PROPOSED')}
+                  sx={{ fontWeight: 600, ...(getChipSxForStatus(motion.status || 'PROPOSED')?.sx || {}) }}
                 />
               </Box>
               <Box sx={{ bgcolor: 'white', borderRadius: 1, mt: 2, p: 2 }}>

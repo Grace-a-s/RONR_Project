@@ -18,10 +18,14 @@ export const getChipSxForStatus = (label) => {
       return { sx: { bgcolor: "#38A3A5", ...darkText } };
     case "VETOED":
       return { sx: { bgcolor: "#4f4e4eff", ...lightText } };
+    case "VETO_CONFIRMED":
+      return { sx: { bgcolor: "#4f4e4eff", ...lightText } };
     case "REJECTED":
       return { sx: { bgcolor: "#8d0858ff", ...lightText } };
     case "PROPOSED":
       return { sx: { bgcolor: "#85D4D5", ...darkText } };
+    case "CHALLENGING_VETO":
+      return { sx: { bgcolor: "#ed6c02", ...lightText } };
     case "PENDING":
     default:
       return { sx: {} };
