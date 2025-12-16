@@ -427,7 +427,19 @@ function MotionPage() {
               <Paper elevation={1} sx={{ p: 2, maxWidth: 900, width: '100%' }}>
                 <Typography variant="subtitle1" gutterBottom>Debate</Typography>
 
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: { xs: '240px', md: '360px' }, overflow: 'auto', pr: 1, pb: { xs: '140px', md: '100px' } }}>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 2,
+                    maxHeight: { xs: '240px', md: '360px' },
+                    overflowY: 'auto',
+                    overflowX: 'hidden',
+                    overscrollBehavior: 'contain',
+                    pr: 1,
+                    pb: { xs: '140px', md: '100px' },
+                  }}
+                >
                   {debates.map((entry, i) => (
                     <Paper key={entry._id || i} variant="outlined" sx={{ p: 2, display: 'flex', gap: 2, alignItems: 'flex-start' }}>
                       <Avatar sx={{ bgcolor: (theme) => theme.palette.primary.main, width: 40, height: 40, flexShrink: 0 }}>
