@@ -30,6 +30,7 @@ import { useMotionsApi } from '../utils/motionsApi';
 import { useMembershipsApi } from '../utils/membershipsApi';
 import { useCommitteesApi } from '../utils/committeesApi';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
+import { getChipSxForStatus } from '../utils/statusColors';
 
 function MotionPage() {
   const { committeeId, motionId } = useParams();
@@ -39,6 +40,7 @@ function MotionPage() {
   const { getMotion, secondMotion, getDebates, createDebate, reproposeMotion, checkReproposeEligibility } = useMotionsApi();
   const { listMembers } = useMembershipsApi(committeeId);
   const { getCommittee } = useCommitteesApi();
+
 
   const [motion, setMotion] = useState(null);
   const [committee, setCommittee] = useState(null);
@@ -310,14 +312,8 @@ function MotionPage() {
                 <Typography variant="h5">{motion.title}</Typography>
                 <Chip
                   label={motion.status || 'PROPOSED'}
-                  color={
-                    motion.status === 'VOTING' ? 'primary' :
-                    motion.status === 'PASSED' ? 'success' :
-                    motion.status === 'REJECTED' ? 'error' :
-                    motion.status === 'DEBATE' ? 'warning' :
-                    'default'
-                  }
-                  sx={{ fontWeight: 600 }}
+                  {...getChipSxForStatus(motion.status || 'PROPOSED')}
+                  sx={{ fontWeight: 600, ...(getChipSxForStatus(motion.status || 'PROPOSED')?.sx || {}) }}
                 />
               </Box>
               <Box sx={{ bgcolor: 'white', borderRadius: 1, mt: 2, p: 2 }}>
