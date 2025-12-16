@@ -10,7 +10,13 @@ async function tallyAndApplyTwoThirds(motion) {
 	const motionId = motion._id;
 	const committeeId = motion.committeeId;
 
-	const memberCount = await Membership.countDocuments({ committeeId });
+	// Get all memberships EXCEPT the Chair (Chairs are excluded from voting)
+	const nonChairMemberships = await Membership.find({
+		committeeId,
+		role: { $ne: 'CHAIR' }
+	}).lean();
+
+	const memberCount = nonChairMemberships.length;
 	if (memberCount <= 0) return null;
 
 	// Fetch committee to get voting threshold
@@ -106,16 +112,14 @@ export async function createVote(user, motionId, body) {
 		const authorId = (user && user.sub) ? user.sub : body.authorId;
 		if (!authorId) return new Response(JSON.stringify({ error: 'authorId required' }), { status: 400, headers: { 'content-type': 'application/json' } });
 
-		// If this is a veto challenge vote, exclude Chair from voting
-		if (motion.status === 'CHALLENGING_VETO') {
-			const membership = await Membership.findOne({
-				userId: authorId,
-				committeeId: motion.committeeId
-			}).lean();
+		// Chairs cannot vote on any motion
+		const membership = await Membership.findOne({
+			userId: authorId,
+			committeeId: motion.committeeId
+		}).lean();
 
-			if (membership && membership.role === 'CHAIR') {
-				return new Response(JSON.stringify({ error: 'Chair cannot vote on veto challenge' }), { status: 403, headers: { 'content-type': 'application/json' } });
-			}
+		if (membership && membership.role === 'CHAIR') {
+			return new Response(JSON.stringify({ error: 'Chair cannot vote' }), { status: 403, headers: { 'content-type': 'application/json' } });
 		}
 
 		// prevent duplicate votes from same user for a motion
