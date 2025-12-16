@@ -178,7 +178,7 @@ function LandingPage() {
       </Box>
 
       {/* Full-bleed banner */}
-      <Box sx={{ position: 'relative', left: '50%', right: '50%', marginLeft: '-50vw', marginRight: '-50vw', width: '100vw', py: 3, background: 'linear-gradient(90deg, #22577A 0%, #38A3A5 100%)', color: 'common.white', mb: 5 }}>
+      <Box sx={{ position: 'relative', left: '50%', right: '50%', marginLeft: '-50vw', marginRight: '-50vw', width: '100vw', py: 3, background: 'linear-gradient(90deg, #22577A 0%, #38A3A5 50%)', color: 'common.white', mb: 5 }}>
         <Container maxWidth="xl">
           <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2 }}>
             <Box sx={{ minWidth: 0, flex: 1 }}>
