@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth0 } from "@auth0/auth0-react";
 import Drawer from '@mui/material/Drawer';
 import Box from '@mui/material/Box';
@@ -20,12 +20,9 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import { castVote, getVotes, getCommitteeMemberCount } from '../lib/api';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
-import { useUsersApi } from '../utils/usersApi';
 
 function VotingPanel({ open, onClose, motion, committee, onVoteSuccess }) {
   const { user, getAccessTokenSilently } = useAuth0();
-  const { getUsernameById } = useUsersApi();
-
   const [votes, setVotes] = useState([]);
   const [userVote, setUserVote] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -37,19 +34,12 @@ function VotingPanel({ open, onClose, motion, committee, onVoteSuccess }) {
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
   const [isAnonymous, setIsAnonymous] = useState(false);
 
-  // username cache and in-flight promise map to dedupe requests
-  const usernameCacheRef = useRef({});
-  const inFlightRef = useRef({});
-  // small state to force rerender after cache updates
-  const [, setUsersResolvedTick] = useState(0);
-
-  const polling_interval = 3000;
   const committeeThreshold = committee?.votingThreshold || 'MAJORITY';
 
   //const committeeThreshold = committee?.votingThreshold || 'MAJORITY';
 
   //useEffect(() => {
-  //const polling_interval = 3000; 
+  const polling_interval = 3000; 
 
   useAutoRefresh(() => {
     if (open && motion) {
@@ -58,20 +48,12 @@ function VotingPanel({ open, onClose, motion, committee, onVoteSuccess }) {
     }
   }, polling_interval, [open, motion]);
 
-  useEffect(() => {
-    // clear caches when panel closes to avoid stale names across motions
-    if (!open) {
-      usernameCacheRef.current = {};
-      inFlightRef.current = {};
-      setUsersResolvedTick(t => t + 1);
-    }
-  }, [open]);
-
   const fetchVotes = async () => {
     try {
       const token = await getAccessTokenSilently();
       const votesData = await getVotes(motion._id, token);
 
+      // Ensure votesData is an array
       const validVotes = Array.isArray(votesData) ? votesData : [];
       setVotes(validVotes);
 
@@ -80,13 +62,14 @@ function VotingPanel({ open, onClose, motion, committee, onVoteSuccess }) {
       setSupportCount(support);
       setOpposeCount(oppose);
 
-      const myVote = validVotes.find(v => v.authorId === user?.sub);
+      const myVote = validVotes.find(v => v.authorId === user.sub);
       setUserVote(myVote);
 
       // Check if anonymous mode is enabled (based on whether timestamps are present)
       // If first vote has no createdAt, we're in anonymous mode
       setIsAnonymous(validVotes.length > 0 && !validVotes[0].createdAt);
     } catch (error) {
+      // On error, reset to empty state
       setVotes([]);
       setSupportCount(0);
       setOpposeCount(0);
@@ -112,53 +95,6 @@ function VotingPanel({ open, onClose, motion, committee, onVoteSuccess }) {
       console.error('Failed to fetch member count:', error);
     }
   };
-
-  const resolveUsernamesForVotes = async (voteList) => {
-    if (!voteList || voteList.length === 0) return;
-
-    const ids = Array.from(new Set(voteList.map(v => v.authorId).filter(Boolean)));
-    const toFetch = ids.filter(id => !(id in usernameCacheRef.current));
-
-    await Promise.all(
-      toFetch.map(async (id) => {
-        if (inFlightRef.current[id]) {
-          // use existing in-flight promise
-          return inFlightRef.current[id];
-        }
-        const p = (async () => {
-          try {
-            // getUsernameById throws if id missing; it returns api.get(..., { auth:false })
-            const data = await getUsernameById(id);
-            // the backend returns { username } or maybe an error body; normalize
-            if (data && typeof data === 'object' && 'username' in data) {
-              usernameCacheRef.current[id] = data.username || null;
-            } else {
-              // unexpected shape, store null to avoid repeat attempts
-              usernameCacheRef.current[id] = null;
-            }
-          } catch (err) {
-            console.error('Failed to resolve username for', id, err);
-            // fall back to null so we can show truncated id
-            usernameCacheRef.current[id] = null;
-          } finally {
-            delete inFlightRef.current[id];
-            // trigger a render after each resolution (or batch)
-            setUsersResolvedTick(t => t + 1);
-          }
-        })();
-        inFlightRef.current[id] = p;
-        return p;
-      })
-    );
-  };
-
-  // when showing votes, resolve usernames for displayed votes
-  useEffect(() => {
-    if (showVotes) {
-      resolveUsernamesForVotes(votes);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showVotes, votes]);
 
   const handleVote = async (position) => {
     try {
@@ -189,32 +125,6 @@ function VotingPanel({ open, onClose, motion, committee, onVoteSuccess }) {
   const supportProgress = totalMembers > 0 ? (supportCount / threshold) * 100 : 0;
   const opposeProgress = totalMembers > 0 ? (opposeCount / threshold) * 100 : 0;
   const totalVotesCast = supportCount + opposeCount;
-
-  const renderVotePrimary = (vote) => {
-    const id = vote.authorId;
-    const cached = usernameCacheRef.current[id];
-
-    if (cached === undefined) {
-      // not yet fetched
-      return (
-        <span>
-          Loading...
-        </span>
-      );
-    }
-
-    if (cached === null) {
-      // lookup failed or user has no username, display Member
-      return (
-        <span>
-          Member
-        </span>
-      );
-    }
-
-    // have a username
-    return <span>{cached}</span>;
-  };
 
   return (
     <>
@@ -380,7 +290,7 @@ function VotingPanel({ open, onClose, motion, committee, onVoteSuccess }) {
                     <ListItemText
                       primary={
                         <Typography variant="body2">
-                          {renderVotePrimary(vote)} voted{' '}
+                          {vote.authorId.substring(0, 8)}... voted{' '}
                           <span style={{
                             fontWeight: 600,
                             color: vote.position === 'SUPPORT' ? '#57CC99' : '#FF57BB'

@@ -1,75 +1,15 @@
-import React, { useEffect, useState } from 'react';
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
 import Chip from '@mui/material/Chip';
 import Button from '@mui/material/Button';
-import { useUsersApi } from "../utils/usersApi";
 import { getChipSxForStatus } from '../utils/statusColors';
 
 function MotionDetailsCard({ motion = {}, onClick }) {
-    const { getUsernameById } = useUsersApi();
-    const [user, setUser] = useState({ username: null });
-    const [loading, setLoading] = useState(false);
-
-    //getting usernames, be in loading state until gets username (or fails)
-    useEffect(() => {
-        let mounted = true;
-        if (!motion || !motion.author) {
-            setUser({ username: null });
-            return () => { mounted = false; };
-        }
-
-        (async () => {
-            try {
-                setLoading(true);
-                const data = await getUsernameById(motion.author);
-                if (!mounted) return;
-                // data may be an object like { username } or an error payload
-                if (data && typeof data === 'object' && 'username' in data) {
-                    setUser({ username: data.username });
-                } else {
-                    setUser({ username: null });
-                }
-            } catch (err) {
-                console.error('Failed to fetch username', err);
-                if (mounted) setUser({ username: null });
-            } finally {
-                if (mounted) setLoading(false);
-            }
-        })();
-
-        return () => { mounted = false; };
-    }, [motion, getUsernameById]);
-
     const statusLabel = motion.status || (motion.second ? 'SECONDED' : 'PENDING');
-    const getChipSxForStatus = (label) => {
-        const s = String(label || '').toUpperCase();
-        // choose text color for readability on the given background
-        const lightText = { color: 'white' };
-        const darkText = { color: 'black' };
 
-        switch (s) {
-            case 'DEBATE':
-                return { sx: { bgcolor: '#FF57BB', ...lightText } };
-            case 'VOTING':
-                return { sx: { bgcolor: '#22577A', ...lightText } };
-            case 'PASSED':
-                return { sx: { bgcolor: '#57CC99', ...darkText } };
-            case 'SECONDED':
-                return { sx: { bgcolor: '#38A3A5', ...darkText } };
-            case 'VETOED':
-                return { sx: { bgcolor: '#4f4e4eff', ...lightText } };
-            case 'REJECTED':
-                return { sx: { bgcolor: '#8d0858ff', ...lightText } };
-            case 'PROPOSED':
-                return {sx: {bgcolor: '#85D4D5', ...darkText}};
-            case 'PENDING':
-            default:
-                return { sx: {} };
-        }
-    };
+    
 
     return (
         <Card
@@ -89,9 +29,7 @@ function MotionDetailsCard({ motion = {}, onClick }) {
                 <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2 }}>
                     <Box sx={{ minWidth: 0 }}>
                         <Typography variant="h6" noWrap sx={{ fontWeight: 700 }}>{motion.title}</Typography>
-                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                            Proposed by {loading ? 'Loading...' : (user?.username || 'Member')}
-                        </Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>Proposed by {motion.author || 'Member'}</Typography>
 
                         <Box sx={{ mt: 1 }}>
                             <Box sx={{ bgcolor: '#f7f7f7', p: 1, borderRadius: 1 }}>
