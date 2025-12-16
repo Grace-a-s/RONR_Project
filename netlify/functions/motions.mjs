@@ -3,7 +3,7 @@
 import { connectDatabase } from "./utils/db.mjs";
 import { createRouter } from './utils/router.mjs';
 import { createDebate, getAllDebates } from './controller/debateController.mjs';
-import { approveMotion, createMotion, getAllMotions, getMotionById, openVote, secondMotion, checkReproposeEligibility, reproposeMotion } from './controller/motionController.mjs';
+import { approveMotion, createMotion, getAllMotions, getMotionById, openVote, secondMotion, checkReproposeEligibility, reproposeMotion, challengeVeto } from './controller/motionController.mjs';
 import { createVote, getAllVotes } from './controller/voteController.mjs';
 import { authGuard } from './utils/guard.mjs';
 import Motion from './model/Motion.mjs';
@@ -89,6 +89,17 @@ router.post('/motions/:id/chair/open-vote', async ({req, params}) => {
   const { user, error } = await authGuard(req, ['CHAIR'], committeeId);
   if (error) return error;
   return openVote(user, motionId);
+});
+
+router.post('/motions/:id/challenge-veto', async ({req, params}) => {
+  // only non-CHAIR committee members can challenge a veto
+  const motionId = params.id;
+  const motion = await Motion.findById(motionId).lean();
+  if (!motion) return new Response(JSON.stringify({ error: 'Motion not found' }), { status: 404, headers: { 'content-type': 'application/json' } });
+  const committeeId = motion.committeeId;
+  const { user, error } = await authGuard(req, ['OWNER','MEMBER'], committeeId);
+  if (error) return error;
+  return challengeVeto(user, motionId);
 });
 
 router.get('/motions/:id/repropose/check', async ({req, params}) => {
