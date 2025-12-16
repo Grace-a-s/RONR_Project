@@ -31,6 +31,7 @@ import { useMembershipsApi } from '../utils/membershipsApi';
 import { useCommitteesApi } from '../utils/committeesApi';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import { useUsersApi } from "../utils/usersApi";
+import { getChipSxForStatus } from '../utils/statusColors';
 
 function MotionPage() {
   const { committeeId, motionId } = useParams();
@@ -40,6 +41,7 @@ function MotionPage() {
   const { getMotion, secondMotion, getDebates, createDebate, reproposeMotion, checkReproposeEligibility } = useMotionsApi();
   const { listMembers } = useMembershipsApi(committeeId);
   const { getCommittee } = useCommitteesApi();
+
 
   const [motion, setMotion] = useState(null);
   const [committee, setCommittee] = useState(null);
@@ -409,14 +411,8 @@ function MotionPage() {
                 <Typography variant="h5">{motion.title}</Typography>
                 <Chip
                   label={motion.status || 'PROPOSED'}
-                  color={
-                    motion.status === 'VOTING' ? 'primary' :
-                    motion.status === 'PASSED' ? 'success' :
-                    motion.status === 'REJECTED' ? 'error' :
-                    motion.status === 'DEBATE' ? 'warning' :
-                    'default'
-                  }
-                  sx={{ fontWeight: 600 }}
+                  {...getChipSxForStatus(motion.status || 'PROPOSED')}
+                  sx={{ fontWeight: 600, ...(getChipSxForStatus(motion.status || 'PROPOSED')?.sx || {}) }}
                 />
               </Box>
               <Box sx={{ bgcolor: 'white', borderRadius: 1, mt: 2, p: 2 }}>
@@ -526,10 +522,49 @@ function MotionPage() {
               <Paper elevation={1} sx={{ p: 2, maxWidth: 900, width: '100%' }}>
                 <Typography variant="subtitle1" gutterBottom>Debate</Typography>
 
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: { xs: '240px', md: '360px' }, overflow: 'auto', pr: 1, pb: { xs: '140px', md: '100px' } }}>
-                  {debates.length > 0 && !isInitialDebateBatchReady ? (
-                    <Typography color="text.secondary" align="center">Loading...</Typography>
-                  ) : debates.length === 0 ? (
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 2,
+                    maxHeight: { xs: '240px', md: '360px' },
+                    overflowY: 'auto',
+                    overflowX: 'hidden',
+                    overscrollBehavior: 'contain',
+                    pr: 1,
+                    pb: { xs: '140px', md: '100px' },
+                  }}
+                >
+                  {debates.map((entry, i) => (
+                    <Paper key={entry._id || i} variant="outlined" sx={{ p: 2, display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+                      <Avatar sx={{ bgcolor: (theme) => theme.palette.primary.main, width: 40, height: 40, flexShrink: 0 }}>
+                        {entry.authorId ? String(entry.authorId)[0].toUpperCase() : 'M'}
+                      </Avatar>
+
+                      <Box sx={{ flex: 1 }}>
+                        <Typography variant="caption" color="text.secondary">
+                          {entry.authorId || 'Member'} · {entry.createdAt ? new Date(entry.createdAt).toLocaleString() : `#${i + 1}`}
+                          {entry.position && (
+                            <Chip 
+                              label={entry.position} 
+                              size="small" 
+                              sx={{ ml: 1 }}
+                              color={
+                                entry.position === 'SUPPORT' ? 'success' :
+                                entry.position === 'OPPOSE' ? 'error' :
+                                'default'
+                              }
+                            />
+                          )}
+                        </Typography>
+
+                        <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', mt: 1 }}>
+                          {entry.content}
+                        </Typography>
+                      </Box>
+                    </Paper>
+                  ))}
+                  {debates.length === 0 && (
                     <Typography color="text.secondary" align="center">No debate entries yet.</Typography>
                   ) : (
                     debates.map((entry, i) => (

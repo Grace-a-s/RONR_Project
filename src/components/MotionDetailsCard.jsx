@@ -6,6 +6,7 @@ import Box from "@mui/material/Box";
 import Chip from '@mui/material/Chip';
 import Button from '@mui/material/Button';
 import { useUsersApi } from "../utils/usersApi";
+import { getChipSxForStatus } from '../utils/statusColors';
 
 function MotionDetailsCard({ motion = {}, onClick }) {
     const { getUsernameById } = useUsersApi();
