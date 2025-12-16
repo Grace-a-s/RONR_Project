@@ -6,17 +6,60 @@ This document describes the HTTP APIs used by the backend service. All endpoints
 
 1. [Overview](#overview)
 2. [Authentication](#authentication)
+   - [Authentication Header](#authentication-header)
+   - [Token Validation](#token-validation)
+   - [User Identification](#user-identification)
 3. [Base URL](#base-url)
 4. [Common Response Formats](#common-response-formats)
+   - [Success Response](#success-response)
+   - [Error Response](#error-response)
+   - [HTTP Status Codes](#http-status-codes)
 5. [API Endpoints](#api-endpoints)
    - [User Endpoints](#user-endpoints)
+     - [Get Current User](#get-current-user)
+     - [Create or Update Current User](#create-or-update-current-user)
+     - [Get User by Username](#get-user-by-username)
    - [Committee Endpoints](#committee-endpoints)
-   - [Motion Endpoints](#motion-endpoints)
-   - [Debate Endpoints](#debate-endpoints)
-   - [Vote Endpoints](#vote-endpoints)
+     - [List All Committees](#list-all-committees)
+     - [Create Committee](#create-committee)
+     - [Get Committee by ID](#get-committee-by-id)
+     - [Update Committee](#update-committee)
    - [Membership Endpoints](#membership-endpoints)
+     - [Get Committee Members](#get-committee-members)
+     - [Add Committee Member](#add-committee-member)
+     - [Remove Committee Member](#remove-committee-member)
+     - [Change Member Role](#change-member-role)
+   - [Motion Endpoints](#motion-endpoints)
+     - [List Committee Motions](#list-committee-motions)
+     - [Create Motion](#create-motion)
+     - [Get Motion Details](#get-motion-details)
+     - [Second a Motion](#second-a-motion)
+     - [Approve or Veto Motion (Chair Only)](#approve-or-veto-motion-chair-only)
+     - [Open Voting (Chair Only)](#open-voting-chair-only)
+   - [Debate Endpoints](#debate-endpoints)
+     - [Create Debate Entry](#create-debate-entry)
+     - [List Debate Entries](#list-debate-entries)
+   - [Vote Endpoints](#vote-endpoints)
+     - [Cast Vote](#cast-vote)
+     - [List Votes](#list-votes)
 6. [Error Handling](#error-handling)
+   - [Standard Error Format](#standard-error-format)
+   - [Common Error Scenarios](#common-error-scenarios)
+     - [Authentication Errors (401)](#authentication-errors-401)
+     - [Permission Errors (403)](#permission-errors-403)
+     - [Validation Errors (400)](#validation-errors-400)
+     - [Not Found Errors (404)](#not-found-errors-404)
+     - [Conflict Errors (409)](#conflict-errors-409)
 7. [Role-Based Access Control](#role-based-access-control)
+   - [Committee Roles](#committee-roles)
+   - [Role Enforcement](#role-enforcement)
+   - [Motion Status Transitions](#motion-status-transitions)
+   - [Valid Transitions](#valid-transitions)
+8. [Data Validation](#data-validation)
+   - [String Normalization](#string-normalization)
+   - [ID Validation](#id-validation)
+   - [Duplicate Prevention](#duplicate-prevention)
+9. [Database Connection](#database-connection)
 
 ---
 
@@ -210,25 +253,6 @@ Retrieves a user's public profile by username.
 - `404 Not Found` - User not found
 
 ---
-### Get Username by ID
-retrieve the username of user (based on ID, the unique identifier for user entries)
-
-**EndPoint**: GET: /users/id/:id
-
-**Authentication**: Not required
-
-**URL Parameters**:
-
-- `id` - ObjectId string of the user document to look up
-
-**Response** (200):
-```json
-{"username": "johndoe"}
-```
-
-**Error Response**:
-- `400 Bad Request` - id required
-- `404 Not Found` - User not found
 
 ## Committee Endpoints
 
@@ -761,8 +785,6 @@ Allows a member to second a motion.
 
 - `id` (ObjectId) - Motion ID
 
-**Request Body**: Empty or `{}`
-
 **Response** (200):
 
 ```json
@@ -851,8 +873,6 @@ Opens the voting phase for a motion under debate.
 **URL Parameters**:
 
 - `id` (ObjectId) - Motion ID
-
-**Request Body**: Empty or `{}`
 
 **Response** (200):
 
@@ -1184,34 +1204,7 @@ All error responses follow this format:
 
 ### Committee Roles
 
-The system implements three role levels within committees:
-
-#### MEMBER
-
-**Permissions**:
-
-- Propose motions
-- Second motions (if not the author)
-- Participate in debates
-- Vote on motions
-
-#### CHAIR
-
-**Permissions**:
-
-- All MEMBER permissions
-- Approve or veto seconded motions
-- Open voting phase after debate
-
-#### OWNER
-
-**Permissions**:
-
-- All MEMBER permissions
-- Create committees
-- Add/remove members
-- Change member roles
-- Update committee information
+The system implements three role levels within committees: `MEMBER`, `CHAIR`, and `OWNER`. See README.md for more details about the roles and their permissions.
 
 ### Role Enforcement
 
@@ -1233,7 +1226,7 @@ const { user, error } = await authGuard(req, ["OWNER"], committeeId);
 Motion status follows a strict lifecycle with role-based transitions:
 
 ```
-PROPOSED → (any user seconds) → SECONDED
+PROPOSED → (any user besides motion author seconds) → SECONDED
 SECONDED → (CHAIR approves) → DEBATE
 SECONDED → (CHAIR vetos) → VETOED
 DEBATE → (CHAIR opens vote) → VOTING
@@ -1241,22 +1234,6 @@ VOTING → (threshold reached) → PASSED or REJECTED
 ```
 
 **Voting Thresholds**: Determined by committee's `votingThreshold` setting (MAJORITY or SUPERMAJORITY)
-
----
-
-## Motion Status Lifecycle
-
-### Status Definitions
-
-| Status     | Description                                           |
-| ---------- | ----------------------------------------------------- |
-| `PROPOSED` | Motion created, awaiting second                       |
-| `SECONDED` | Motion seconded, awaiting chair approval              |
-| `VETOED`   | Chair ruled motion out of order                       |
-| `DEBATE`   | Motion open for discussion                            |
-| `VOTING`   | Voting in progress                                    |
-| `PASSED`   | Motion approved by committee's voting threshold       |
-| `REJECTED` | Motion failed to achieve committee's voting threshold |
 
 ### Valid Transitions
 
@@ -1275,24 +1252,8 @@ From `DEBATE`:
 
 From `VOTING`:
 
-- → `PASSED` (automatically when 2/3 votes support)
-- → `REJECTED` (automatically when 2/3 votes oppose)
-
-### Automatic Vote Tallying
-
-When a vote is cast on a motion in `VOTING` status:
-
-1. Count all `SUPPORT` votes
-2. Count all `OPPOSE` votes
-3. Get total committee membership count
-4. Calculate threshold based on committee's `votingThreshold` setting:
-   - **MAJORITY**: `Math.ceil(memberCount / 2)` (simple majority)
-   - **SUPERMAJORITY**: `Math.ceil((memberCount * 2) / 3)` (two-thirds majority)
-5. If support votes ≥ threshold: set status to `PASSED`
-6. If oppose votes ≥ threshold: set status to `REJECTED`
-7. Otherwise: motion remains in `VOTING` status
-
-**Note**: Currently, the implementation uses SUPERMAJORITY (2/3) threshold by default. Future updates may respect the committee's `votingThreshold` setting.
+- → `PASSED` (automatically when threshold for support reached)
+- → `REJECTED` (automatically when threshold for against reached)
 
 ---
 
@@ -1321,9 +1282,7 @@ All ObjectId parameters are validated:
 
 ---
 
-## Additional Notes
-
-### Database Connection
+## Database Connection
 
 All serverless functions automatically connect to MongoDB before processing requests:
 
@@ -1333,44 +1292,3 @@ export default async function (req, context) {
   return router.handle(req, context);
 }
 ```
-
-### Population
-
-Some endpoints populate related data:
-
-- `/committees/:id/member` populates user details (username, email, firstName, lastName)
-
-### Aggregations
-
-- Committee lists include aggregated `membersCount` and `motionsCount`
-- Vote tallying uses aggregation to determine motion outcomes
-
-### Sorting
-
-- Motions: Sorted by `createdAt` descending (newest first)
-- Debates: Sorted by `createdAt` descending (newest first)
-- Votes: Sorted by `createdAt` descending (newest first)
-
----
-
-## API Versioning
-
-Currently, the API has no version prefix. Future versions may introduce versioning in the URL path:
-
-```
-/.netlify/functions/v2/...
-```
-
-## Rate Limiting
-
-Rate limiting is not currently implemented but should be considered for production deployments.
-
-## CORS
-
-CORS configuration is handled by Netlify. Ensure appropriate origins are configured in `netlify.toml`.
-
----
-
-## Support and Contact
-
-For issues or questions about the API, please refer to the project README or contact the development team.

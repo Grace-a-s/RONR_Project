@@ -2,6 +2,19 @@
 
 This document describes the MongoDB database structure, including collections, fields, and relationships between entities.
 
+## Table of Contents
+
+- [Overview](#overview)
+  - [Core Data Objects](#core-data-objects)
+  - [High-Level Relationship Summary](#high-level-relationship-summary)
+- [Collections](#collections)
+  - [1. Users](#1-users)
+  - [2. Committees](#2-committees)
+  - [3. Memberships](#3-memberships)
+  - [4. Motions](#4-motions)
+  - [5. Debates](#5-debates)
+  - [6. Votes](#6-votes)
+
 ## Overview
 
 The system models committee-based decision making with users, committees, motions, debates, and votes.
@@ -34,7 +47,7 @@ Stores application users. User data is synchronized with Auth0.
 | Field       | Type   | Description                                            |
 | ----------- | ------ | ------------------------------------------------------ |
 | `_id`       | String | Auth0 user identifier (e.g., "auth0\|123456")          |
-| `username`  | String | Display name (unique, sparse index)                    |
+| `username`  | String | Display name (unique)                                  |
 | `email`     | String | User email (synced with Auth0)                         |
 | `firstName` | String | User first name                                        |
 | `lastName`  | String | User last name                                         |
@@ -45,13 +58,11 @@ Stores application users. User data is synchronized with Auth0.
 
 **Notes**:
 
-- The `_id` field is set to the Auth0 user ID (String) instead of MongoDB ObjectId
-- Username has a unique sparse index (allows multiple null values)
-- All string fields are trimmed automatically
+- User authentication is handled with Auth0. The `_id` field is set to the Auth0 user ID (String) instead of MongoDB ObjectId
 
 ### 2. Committees
 
-Represents a governing or decision-making body.
+Represents governing or decision-making bodies.
 
 | Field             | Type     | Description                                           |
 | ----------------- | -------- | ----------------------------------------------------- |
@@ -81,29 +92,11 @@ Defines the relationship between users and committees, including roles and permi
 | `createdAt`   | Date     | Timestamp membership was created       |
 | `updatedAt`   | Date     | Timestamp membership was last updated  |
 
-#### Definition of Roles and Permissions
+**Roles**:
 
-As outlined in the table, there are three main roles within a committee. Each role is provided certain permissions.
-
-**MEMBER**
-
-- Propose motions
-- Second motions (if not author)
-- Debate motions
-- Vote on motions
-
-**CHAIR**
-
-- All MEMBER permissions
-- Approve or veto seconded motions
-- Open voting phase after debate
-
-**OWNER**
-
-- All MEMBER permissions
-- Create committees
-- Add/remove members
-- Change member roles
+- `MEMBER`: Standard participants in the committee who can fully participate in the deliberative process
+- `CHAIR`: Manages the governance and procedural aspects of the committee
+- `OWNER`: Ability to manage the roles of other users within the committee. This role is automatically assigned to the person who created the committee
 
 ### 4. Motions
 
@@ -121,19 +114,15 @@ Represents proposals introduced within a committee.
 | `createdAt`        | Date     | Timestamp motion was created                    |
 | `updatedAt`        | Date     | Timestamp motion was last updated               |
 
-#### Definition of Motion Statuses
+**Motion Statuses**:
 
-| Status     | Description                              |
-| ---------- | ---------------------------------------- |
-| `PROPOSED` | Motion created                           |
-| `SECONDED` | Motion seconded, awaiting chair approval |
-| `VETOED`   | Chair rules motion out of order          |
-| `DEBATE`   | Motion under discussion                  |
-| `VOTING`   | Voting in progress                       |
-| `PASSED`   | Motion approved                          |
-| `REJECTED` | Motion failed                            |
-
-#### Motion Status Lifecycle
+- `PROPOSED`: Motion created
+- `SECONDED`: Motion seconded, awaiting chair approval
+- `VETOED`: Chair rules motion out of order
+- `DEBATE`: Motion under discussion
+- `VOTING`: Voting in progress
+- `PASSED`: Motion approved
+- `REJECTED`: Motion failed
 
 ### 5. Debates
 
