@@ -25,6 +25,12 @@ const motionSchema = new Schema({
     type: String,
     enum: ["PROPOSED", "SECONDED", "VETOED", "DEBATE", "VOTING", "PASSED", "REJECTED"],
     default: "PROPOSED"
+  },
+  originalMotionId: {
+    type: Schema.Types.ObjectId,
+    ref: 'Motion',
+    required: false,
+    default: null
   }
 }, {
   timestamps: true

@@ -4,9 +4,12 @@ import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
 import Chip from '@mui/material/Chip';
 import Button from '@mui/material/Button';
+import { getChipSxForStatus } from '../utils/statusColors';
 
 function MotionDetailsCard({ motion = {}, onClick }) {
     const statusLabel = motion.status || (motion.second ? 'SECONDED' : 'PENDING');
+
+    
 
     return (
         <Card
@@ -48,7 +51,7 @@ function MotionDetailsCard({ motion = {}, onClick }) {
                     </Box>
 
                     <Box sx={{ ml: 1, flexShrink: 0 }}>
-                        <Chip label={statusLabel} color={statusLabel === 'DEBATE' ? 'warning' : statusLabel === 'SECONDED' ? 'success' : 'default'} />
+                        <Chip label={statusLabel} {...getChipSxForStatus(statusLabel)} />
                     </Box>
                 </Box>
             </CardContent>
