@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth0 } from "@auth0/auth0-react";
 import Drawer from '@mui/material/Drawer';
 import Box from '@mui/material/Box';
@@ -20,9 +20,12 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import { castVote, getVotes, getCommitteeMemberCount } from '../lib/api';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
+import { useUsersApi } from '../utils/usersApi';
 
-function VotingPanel({ open, onClose, motion, onVoteSuccess }) {
+function VotingPanel({ open, onClose, motion, committee, onVoteSuccess }) {
   const { user, getAccessTokenSilently } = useAuth0();
+  const { getUsernameById } = useUsersApi();
+
   const [votes, setVotes] = useState([]);
   const [userVote, setUserVote] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -32,8 +35,22 @@ function VotingPanel({ open, onClose, motion, onVoteSuccess }) {
   const [supportCount, setSupportCount] = useState(0);
   const [opposeCount, setOpposeCount] = useState(0);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
+  const [isAnonymous, setIsAnonymous] = useState(false);
+  const [isVetoChallenge, setIsVetoChallenge] = useState(false);
 
-   const polling_interval = 3000; 
+  // username cache and in-flight promise map to dedupe requests
+  const usernameCacheRef = useRef({});
+  const inFlightRef = useRef({});
+  // small state to force rerender after cache updates
+  const [, setUsersResolvedTick] = useState(0);
+
+  const polling_interval = 3000;
+  const committeeThreshold = committee?.votingThreshold || 'MAJORITY';
+
+  //const committeeThreshold = committee?.votingThreshold || 'MAJORITY';
+
+  //useEffect(() => {
+  //const polling_interval = 3000; 
 
   useAutoRefresh(() => {
     if (open && motion) {
@@ -42,10 +59,23 @@ function VotingPanel({ open, onClose, motion, onVoteSuccess }) {
     }
   }, polling_interval, [open, motion]);
 
+  useEffect(() => {
+    // clear caches when panel closes to avoid stale names across motions
+    if (!open) {
+      usernameCacheRef.current = {};
+      inFlightRef.current = {};
+      setUsersResolvedTick(t => t + 1);
+    }
+  }, [open]);
+
   const fetchVotes = async () => {
     try {
       const token = await getAccessTokenSilently();
       const votesData = await getVotes(motion._id, token);
+
+      // Check if this is a veto challenge vote
+      const isChallenge = motion.status === 'CHALLENGING_VETO';
+      setIsVetoChallenge(isChallenge);
 
       // Ensure votesData is an array
       const validVotes = Array.isArray(votesData) ? votesData : [];
@@ -56,14 +86,19 @@ function VotingPanel({ open, onClose, motion, onVoteSuccess }) {
       setSupportCount(support);
       setOpposeCount(oppose);
 
-      const myVote = validVotes.find(v => v.authorId === user.sub);
+      const myVote = validVotes.find(v => v.authorId === user?.sub);
       setUserVote(myVote);
+
+      // Check if anonymous mode is enabled (based on whether timestamps are present)
+      // If first vote has no createdAt, we're in anonymous mode
+      setIsAnonymous(validVotes.length > 0 && !validVotes[0].createdAt);
     } catch (error) {
-      // On error, reset to empty state
       setVotes([]);
       setSupportCount(0);
       setOpposeCount(0);
       setUserVote(null);
+      setIsAnonymous(false);
+      setIsVetoChallenge(false);
       console.error('Failed to fetch votes:', error);
       setSnackbar({ open: true, message: error.message || 'Failed to fetch votes', severity: 'error' });
     }
@@ -73,11 +108,66 @@ function VotingPanel({ open, onClose, motion, onVoteSuccess }) {
     try {
       const token = await getAccessTokenSilently();
       const memberships = await getCommitteeMemberCount(motion.committeeId, token);
-      setTotalMembers(Array.isArray(memberships) ? memberships.length : 0);
+
+      let count = Array.isArray(memberships) ? memberships.length : 0;
+
+      // For veto challenges, exclude Chair from count
+      if (isVetoChallenge && count > 0) {
+        count = count - 1; // Subtract 1 for the Chair
+      }
+
+      setTotalMembers(count);
     } catch (error) {
       console.error('Failed to fetch member count:', error);
     }
   };
+
+  const resolveUsernamesForVotes = async (voteList) => {
+    if (!voteList || voteList.length === 0) return;
+
+    const ids = Array.from(new Set(voteList.map(v => v.authorId).filter(Boolean)));
+    const toFetch = ids.filter(id => !(id in usernameCacheRef.current));
+
+    await Promise.all(
+      toFetch.map(async (id) => {
+        if (inFlightRef.current[id]) {
+          // use existing in-flight promise
+          return inFlightRef.current[id];
+        }
+        const p = (async () => {
+          try {
+            // getUsernameById throws if id missing; it returns api.get(..., { auth:false })
+            const data = await getUsernameById(id);
+            // the backend returns { username } or maybe an error body; normalize
+            if (data && typeof data === 'object' && 'username' in data) {
+              usernameCacheRef.current[id] = data.username || null;
+            } else {
+              // unexpected shape, store null to avoid repeat attempts
+              usernameCacheRef.current[id] = null;
+            }
+          } catch (err) {
+            console.error('Failed to resolve username for', id, err);
+            // fall back to null so we can show truncated id
+            usernameCacheRef.current[id] = null;
+          } finally {
+            delete inFlightRef.current[id];
+            // trigger a render after each resolution (or batch)
+            setUsersResolvedTick(t => t + 1);
+          }
+        })();
+        inFlightRef.current[id] = p;
+        return p;
+      })
+    );
+  };
+
+  // when showing votes, resolve usernames for displayed votes
+  useEffect(() => {
+    if (showVotes) {
+      resolveUsernamesForVotes(votes);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showVotes, votes]);
 
   const handleVote = async (position) => {
     try {
@@ -99,10 +189,44 @@ function VotingPanel({ open, onClose, motion, onVoteSuccess }) {
     }
   };
 
-  const threshold = Math.ceil((totalMembers * 2) / 3);
+  // For veto challenges, ALWAYS use 2/3 threshold regardless of committee settings
+  const threshold = isVetoChallenge
+    ? Math.ceil((totalMembers * 2) / 3)
+    : (committeeThreshold === "SUPERMAJORITY"
+        ? Math.ceil((totalMembers * 2) / 3)
+        : Math.floor(totalMembers / 2) + 1);
+  const thresholdText = isVetoChallenge ? "2/3 (Veto Challenge)" : (committeeThreshold === "SUPERMAJORITY" ? "2/3" : "majority");
+  const thresholdDescription = isVetoChallenge ? "2/3 (required for veto challenges)" : (committeeThreshold === "SUPERMAJORITY" ? "2/3" : "majority");
+
   const supportProgress = totalMembers > 0 ? (supportCount / threshold) * 100 : 0;
   const opposeProgress = totalMembers > 0 ? (opposeCount / threshold) * 100 : 0;
   const totalVotesCast = supportCount + opposeCount;
+
+  const renderVotePrimary = (vote) => {
+    const id = vote.authorId;
+    const cached = usernameCacheRef.current[id];
+
+    if (cached === undefined) {
+      // not yet fetched
+      return (
+        <span>
+          Loading...
+        </span>
+      );
+    }
+
+    if (cached === null) {
+      // lookup failed or user has no username, display Member
+      return (
+        <span>
+          Member
+        </span>
+      );
+    }
+
+    // have a username
+    return <span>{cached}</span>;
+  };
 
   return (
     <>
@@ -119,7 +243,9 @@ function VotingPanel({ open, onClose, motion, onVoteSuccess }) {
       >
         <Box sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Typography variant="h6">Vote on Motion</Typography>
+            <Typography variant="h6">
+              {isVetoChallenge ? 'Veto Challenge Vote' : 'Vote on Motion'}
+            </Typography>
             <IconButton onClick={onClose} size="small">
               <CloseIcon />
             </IconButton>
@@ -129,6 +255,18 @@ function VotingPanel({ open, onClose, motion, onVoteSuccess }) {
             {motion?.title}
           </Typography>
 
+          {isVetoChallenge && (
+            <Box sx={{ mb: 2, p: 2, bgcolor: '#fff3cd', borderRadius: 1 }}>
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                Veto Challenge Vote
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Requires 2/3 supermajority to overrule veto. Chair is excluded from voting.
+                SUPPORT = Overrule veto, OPPOSE = Uphold veto.
+              </Typography>
+            </Box>
+          )}
+
           <Divider sx={{ mb: 3 }} />
 
           <Box sx={{ mb: 3 }}>
@@ -136,7 +274,7 @@ function VotingPanel({ open, onClose, motion, onVoteSuccess }) {
               Vote Progress
             </Typography>
             <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
-              Bars show progress toward 2/3 threshold • Percentages show vote distribution
+              Bars show progress toward {thresholdText} threshold • Percentages show vote distribution
             </Typography>
 
             <Box sx={{ mt: 2 }}>
@@ -186,7 +324,7 @@ function VotingPanel({ open, onClose, motion, onVoteSuccess }) {
             </Box>
 
             <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block' }}>
-              Total members: {totalMembers} • Need {threshold} votes (2/3) to pass
+              Total voting members: {totalMembers} • Need {threshold} votes ({thresholdDescription}) to pass
             </Typography>
           </Box>
 
@@ -197,11 +335,13 @@ function VotingPanel({ open, onClose, motion, onVoteSuccess }) {
               <Typography variant="body2" sx={{ fontWeight: 600 }}>
                 You voted: {userVote.position}
               </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {new Date(userVote.createdAt).toLocaleString()}
-              </Typography>
+              {!isAnonymous && (
+                <Typography variant="caption" color="text.secondary">
+                  {new Date(userVote.createdAt).toLocaleString()}
+                </Typography>
+              )}
             </Box>
-          ) : motion?.status === 'VOTING' ? (
+          ) : (motion?.status === 'VOTING' || motion?.status === 'CHALLENGING_VETO') ? (
             <Box sx={{ mb: 3 }}>
               <Typography variant="subtitle2" gutterBottom>
                 Cast Your Vote
@@ -251,19 +391,22 @@ function VotingPanel({ open, onClose, motion, onVoteSuccess }) {
               variant="outlined"
               endIcon={showVotes ? <ExpandLessIcon /> : <ExpandMoreIcon />}
               onClick={() => setShowVotes(!showVotes)}
+              disabled={isAnonymous}
               sx={{ mb: 2 }}
             >
-              {showVotes ? 'Hide Votes' : 'Show Votes'} ({votes.length})
+              {isAnonymous
+                ? `Votes Hidden (${votes.length})`
+                : (showVotes ? 'Hide Votes' : 'Show Votes') + ` (${votes.length})`}
             </Button>
 
-            {showVotes && (
+            {showVotes && !isAnonymous && (
               <List>
                 {votes.map((vote, index) => (
                   <ListItem key={index} divider>
                     <ListItemText
                       primary={
                         <Typography variant="body2">
-                          {vote.authorId.substring(0, 8)}... voted{' '}
+                          {renderVotePrimary(vote)} voted{' '}
                           <span style={{
                             fontWeight: 600,
                             color: vote.position === 'SUPPORT' ? '#57CC99' : '#FF57BB'

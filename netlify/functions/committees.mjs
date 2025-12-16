@@ -3,7 +3,7 @@
 import { connectDatabase } from "./utils/db.mjs";
 import { createRouter } from './utils/router.mjs';
 import { authGuard } from './utils/guard.mjs';
-import { createCommittee, getAllCommittees, getCommitteeById, updateCommitteeById } from "./controller/committeeController.mjs";
+import { createCommittee, getAllCommittees, getCommitteeById, updateCommitteeById, updateVotingThreshold, updateAnonymousVoting } from "./controller/committeeController.mjs";
 import { getMembers, addMember, removeMember, changeRole } from "./controller/membershipController.mjs";
 import { createMotion, getAllMotions } from './controller/motionController.mjs';
 
@@ -47,6 +47,20 @@ router.patch('/committees/:id', async ({req, params, body}) => {
   const { user, error } = await authGuard(req, ["OWNER"], params.id);
   if (error) return error;
   return updateCommitteeById(user, params.id, body);
+});
+
+router.patch('/committees/:id/voting-threshold', async ({req, params, body}) => {
+  // only CHAIR can update voting threshold
+  const { user, error } = await authGuard(req, ["CHAIR"], params.id);
+  if (error) return error;
+  return updateVotingThreshold(user, params.id, body);
+});
+
+router.patch('/committees/:id/anonymous-voting', async ({req, params, body}) => {
+  // only CHAIR can update anonymous voting setting
+  const { user, error } = await authGuard(req, ["CHAIR"], params.id);
+  if (error) return error;
+  return updateAnonymousVoting(user, params.id, body);
 });
 
 router.get('/committees/:id/member', async ({req, params}) => {
