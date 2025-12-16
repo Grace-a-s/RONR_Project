@@ -76,6 +76,16 @@ export async function chairApproveMotion(motionId, action, token) {
   });
 }
 
+export async function challengeVeto(motionId, token) {
+  const url = `/.netlify/functions/motions/${motionId}/challenge-veto`;
+  return fetchJson(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+}
+
 export async function getCommitteeMemberCount(committeeId, token) {
   const url = `/.netlify/functions/committees/${committeeId}/member`;
   return fetchJson(url, {

@@ -6,20 +6,25 @@ import Typography from '@mui/material/Typography';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import InputAdornment from '@mui/material/InputAdornment';
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
 import AddIcon from '@mui/icons-material/Add';
 import PeopleIcon from '@mui/icons-material/People';
 import GavelIcon from '@mui/icons-material/Gavel';
 import Button from '@mui/material/Button';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SearchIcon from '@mui/icons-material/Search';
-import FilterAltIcon from '@mui/icons-material/FilterAlt';
 import CreateMotionDialog from '../components/CreateMotionDialog';
 import MotionDetailsCard from '../components/MotionDetailsCard';
 import CircularProgress from '@mui/material/CircularProgress';
 import Alert from '@mui/material/Alert';
+import LoadingPage from './LoadingPage.jsx';
 import { useCommitteesApi } from '../utils/committeesApi';
 import { useMotionsApi } from '../utils/motionsApi';
 import { useMembershipsApi } from '../utils/membershipsApi';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
 
 function CommitteePage() {
   const navigate = useNavigate();
@@ -29,6 +34,7 @@ function CommitteePage() {
   const [motionDescription, setMotionDescription] = useState('');
   const [motions, setMotions] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [committee, setCommittee] = useState(null);
   const [committeeLoading, setCommitteeLoading] = useState(true);
   const [motionsLoading, setMotionsLoading] = useState(true);
@@ -40,6 +46,8 @@ function CommitteePage() {
   const { getCommittee } = useCommitteesApi();
   const { listMotions, createMotion } = useMotionsApi();
   const { listMembers } = useMembershipsApi(committeeId);
+
+  const polling_interval = 30000; // 30 sec
 
   const mapMotion = useCallback((motion = {}) => ({
     id: String(motion._id),
@@ -84,9 +92,9 @@ function CommitteePage() {
     refreshCommittee();
   }, [refreshCommittee]);
 
-  useEffect(() => {
+  useAutoRefresh(() => {
     refreshMotions();
-  }, [refreshMotions]);
+  }, polling_interval,[refreshMotions]);
 
   const refreshMembersCount = useCallback(async () => {
     if (!committeeId) return;
@@ -103,9 +111,9 @@ function CommitteePage() {
     }
   }, [committeeId, listMembers]);
 
-  useEffect(() => {
+  useAutoRefresh(() => {
     refreshMembersCount();
-  }, [refreshMembersCount]);
+  }, polling_interval, [refreshMembersCount]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -142,17 +150,24 @@ function CommitteePage() {
 
 
   const motionsCount = motions.length;
-  const bannerLoading = committeeLoading || membersLoading;
 
   const filteredMotions = useMemo(() => {
-    if (!searchQuery.trim()) return motions;
     const lowered = searchQuery.trim().toLowerCase();
     return motions.filter((motion) => {
       const title = (motion.title || '').toLowerCase();
       const description = (motion.description || '').toLowerCase();
-      return title.includes(lowered) || description.includes(lowered);
+      const matchesText = !lowered || title.includes(lowered) || description.includes(lowered);
+      if (!statusFilter) return matchesText;
+      // statusFilter stores upper-case status keys like 'PROPOSED'
+      return matchesText && String(motion.status || '').toUpperCase() === statusFilter;
     });
-  }, [motions, searchQuery]);
+  }, [motions, searchQuery, statusFilter]);
+
+  const pageLoading = committeeLoading || motionsLoading || membersLoading;
+
+  if (pageLoading) {
+    return <LoadingPage/>;
+  }
 
   return (
     <Container maxWidth="xl" sx={{ marginTop: 4 }}>
@@ -172,12 +187,6 @@ function CommitteePage() {
         <Container maxWidth="xl">
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
             <Box sx={{ minWidth: 0 }}>
-              {bannerLoading ? (
-                <Stack direction="row" spacing={2} alignItems="center">
-                  <CircularProgress color="inherit" size={24} thickness={4} />
-                  <Typography variant="body2">Loading committee details…</Typography>
-                </Stack>
-              ) : (
                 <>
                   <Typography variant="h5" sx={{ fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{committee?.name || `Committee ${committeeId}`}</Typography>
                   <Typography variant="body2" sx={{ mt: 1, color: 'rgba(255,255,255,0.9)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
@@ -196,7 +205,6 @@ function CommitteePage() {
                     </Box>
                   </Stack>
                 </>
-              )}
             </Box>
 
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -255,18 +263,34 @@ function CommitteePage() {
             }}
           />
 
-          <Button 
-            sx={{ 
-                bgcolor: '#FF57BB', 
-                color: 'common.white', 
-                p: 1.5, 
-                borderRadius: '10px', 
-                border: '1px solid rgba(0,0,0,0.12)',
-                '&:hover': { boxShadow: 6} 
+          <FormControl size="small" sx={{ minWidth: 130 }}>
+            <InputLabel id="status-filter-label" sx={{ color: '#FF57BB' }}>Status</InputLabel>
+            <Select
+              labelId="status-filter-label"
+              id="status-filter"
+              value={statusFilter}
+              label="Status"
+              onChange={(e) => setStatusFilter(e.target.value)}
+              sx={{
+                bgcolor: 'white',
+                borderRadius: '10px',
+                px: 1,
+                border: '2px solid #FF57BB',
+                color: '#FF57BB',
+                '& .MuiSelect-icon': { color: '#FF57BB' },
               }}
-          >
-            <FilterAltIcon/>
-          </Button>
+            >
+              <MenuItem value="">All</MenuItem>
+              <MenuItem value="PROPOSED">Proposed</MenuItem>
+              <MenuItem value="PENDING">Pending</MenuItem>
+              <MenuItem value="SECONDED">Seconded</MenuItem>
+              <MenuItem value="VETOED">Vetoed</MenuItem>
+              <MenuItem value="DEBATE">Debate</MenuItem>
+              <MenuItem value="VOTING">Voting</MenuItem>
+              <MenuItem value="PASSED">Passed</MenuItem>
+              <MenuItem value="REJECTED">Rejected</MenuItem>
+            </Select>
+          </FormControl>
 
           <Button 
             onClick={handleOpenCreate} 
