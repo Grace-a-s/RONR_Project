@@ -27,9 +27,9 @@ function UserRolesPage() {
                 </Typography>
 
                 <Typography variant="body1" sx={{ mb: 4 }}>
-                    In this system, each committee member is assigned one of three roles that determine their
-                    permissions and responsibilities. Understanding these roles will help you navigate the
-                    committee's governance structure and know what actions you can take.
+                    In Bob's Rules, each committee member is assigned one of three roles that determine their
+                    permissions and responsibilities. This page provides an explanation of these roles, to facilitate
+                    your understanding of the structure of committees and the role of each user within them.
                 </Typography>
 
                 {/* OWNER Role */}
@@ -38,19 +38,17 @@ function UserRolesPage() {
                         Owner
                     </Typography>
                     <Typography variant="body1" sx={{ mb: 2 }}>
-                        The Owner has complete administrative control over the committee. This role is
-                        typically assigned to the person who created the committee and is responsible for
-                        its overall management and configuration.
+                        The Owner has the ability to manage the roles of other users within the committee. 
+                        This role is automatically assigned to the person who created the committee. Multiple 
+                        users can share the Owner role.
                     </Typography>
                     <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
                         Permissions:
                     </Typography>
                     <Box component="ul" sx={{ mt: 0, pl: 3 }}>
-                        <Typography component="li" variant="body2">Create and delete the committee</Typography>
+                        <Typography component="li" variant="body2">Create the committee</Typography>
                         <Typography component="li" variant="body2">Add and remove members</Typography>
-                        <Typography component="li" variant="body2">Change member roles (assign/remove CHAIR status)</Typography>
-                        <Typography component="li" variant="body2">Configure all voting settings (threshold, anonymous voting)</Typography>
-                        <Typography component="li" variant="body2">All CHAIR permissions</Typography>
+                        <Typography component="li" variant="body2">Change member roles (assign/remove CHAIR/OWNER status)</Typography>
                         <Typography component="li" variant="body2">All MEMBER permissions</Typography>
                     </Box>
                 </Box>
@@ -65,18 +63,19 @@ function UserRolesPage() {
                     <Typography variant="body1" sx={{ mb: 2 }}>
                         The Chair (or presiding officer) manages the governance and procedural aspects of
                         the committee. This role ensures proper parliamentary procedure and controls the
-                        flow of business during meetings.
+                        flow of business during meetings. A Chair, notably, is not a voting member: in order
+                        to preserve impartiality and avoid the appearance of bias, the Chair's role excludes
+                        them from proposing motions, casting votes, or participating in debates.
                     </Typography>
                     <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
                         Permissions:
                     </Typography>
                     <Box component="ul" sx={{ mt: 0, pl: 3 }}>
-                        <Typography component="li" variant="body2">Approve or veto motions</Typography>
+                        <Typography component="li" variant="body2">Approve or veto motions to advance to debate</Typography>
                         <Typography component="li" variant="body2">Open voting on motions</Typography>
                         <Typography component="li" variant="body2">Manage voting threshold settings (majority vs. supermajority)</Typography>
                         <Typography component="li" variant="body2">Control anonymous voting settings</Typography>
-                        <Typography component="li" variant="body2">Manage and moderate debates</Typography>
-                        <Typography component="li" variant="body2">All MEMBER permissions</Typography>
+                        <Typography component="li" variant="body2">Second another user's motion</Typography>
                     </Box>
                 </Box>
 
@@ -99,7 +98,7 @@ function UserRolesPage() {
                         <Typography component="li" variant="body2">Second motions proposed by others</Typography>
                         <Typography component="li" variant="body2">Participate in debates and discussions</Typography>
                         <Typography component="li" variant="body2">Cast votes on open motions</Typography>
-                        <Typography component="li" variant="body2">Challenge vetoes</Typography>
+                        <Typography component="li" variant="body2">Challenge Chair vetoes</Typography>
                         <Typography component="li" variant="body2">View committee information and motion history</Typography>
                     </Box>
                 </Box>
