@@ -87,7 +87,21 @@ The Owner has the ability to manage the roles of other users within the committe
 
 ### Website Walkthrough
 
-[ Insert screenshots ]
+When the website is opened for the first time by a user they will be asked to log in/sign up. A real email is not required. Password strength requirements pop up for the user to reference. 
+<img width="1920" height="1128" alt="Screenshot 2025-12-16 115044" src="https://github.com/user-attachments/assets/65a1cae1-fb05-42af-999f-9de1f8bf826b" />
+<img width="1920" height="1128" alt="Screenshot 2025-12-16 115208" src="https://github.com/user-attachments/assets/c6f9c4e0-84c8-4da0-bf73-6cba80d37cd4" />
+Once the user has been authenticated they are brought to the landing page
+<img width="1920" height="1128" alt="Screenshot 2025-12-16 115304" src="https://github.com/user-attachments/assets/7771cd89-fb10-4eaf-8d95-54e81228cc77" />
+The username will be the beginning of their email until they change it on their profile (Shown later). The user can begin creating committees. By creating a committee they become the Owner. 
+<img width="1920" height="1128" alt="Screenshot 2025-12-16 115341" src="https://github.com/user-attachments/assets/5874b576-cee7-48b7-94eb-ef5ebb82ea0e" />
+<img width="1920" height="1128" alt="Screenshot 2025-12-16 115559" src="https://github.com/user-attachments/assets/a2ef6c55-241f-450c-a88e-965d79213545" />
+The user can then click in to a committee. If the user has been added as a Member to another committee by others it will show here as well. 
+<img width="1920" height="1128" alt="Screenshot 2025-12-16 115626" src="https://github.com/user-attachments/assets/6a022c49-eb0c-4b14-99f3-629353398ca6" />
+Once in a committee the user can click Manage/View Membership. Sicne this user is the Owner they can then add members and change member roles by double clicking on the role entry. 
+<img width="1920" height="1128" alt="Screenshot 2025-12-16 115651" src="https://github.com/user-attachments/assets/752c1403-6e6e-438c-93bb-95a23eb1e58a" />
+<img width="1920" height="1128" alt="Screenshot 2025-12-16 115752" src="https://github.com/user-attachments/assets/d396ee81-918a-4939-904e-ef0fd8947df2" />
+
+
 
 ## Technical Stack
 
