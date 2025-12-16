@@ -19,11 +19,14 @@ This document describes the HTTP APIs used by the backend service. All endpoints
      - [Get Current User](#get-current-user)
      - [Create or Update Current User](#create-or-update-current-user)
      - [Get User by Username](#get-user-by-username)
+     - [Get Username by ID](#get-username-by-id)
    - [Committee Endpoints](#committee-endpoints)
      - [List All Committees](#list-all-committees)
      - [Create Committee](#create-committee)
      - [Get Committee by ID](#get-committee-by-id)
      - [Update Committee](#update-committee)
+     - [Update Voting Threshold (Chair Only)](#update-voting-threshold-chair-only)
+     - [Update Anonymous Voting (Chair Only)](#update-anonymous-voting-chair-only)
    - [Membership Endpoints](#membership-endpoints)
      - [Get Committee Members](#get-committee-members)
      - [Add Committee Member](#add-committee-member)
@@ -36,6 +39,9 @@ This document describes the HTTP APIs used by the backend service. All endpoints
      - [Second a Motion](#second-a-motion)
      - [Approve or Veto Motion (Chair Only)](#approve-or-veto-motion-chair-only)
      - [Open Voting (Chair Only)](#open-voting-chair-only)
+     - [Challenge Veto (Members)](#challenge-veto-members)
+     - [Check Re-Proposal Eligibility](#check-re-proposal-eligibility)
+     - [Re-Propose Rejected Motion](#re-propose-rejected-motion)
    - [Debate Endpoints](#debate-endpoints)
      - [Create Debate Entry](#create-debate-entry)
      - [List Debate Entries](#list-debate-entries)
@@ -254,6 +260,26 @@ Retrieves a user's public profile by username.
 
 ---
 
+### Get Username by ID
+
+Retrieve the username of user (based on ID, the unique identifier for user entries)
+
+**EndPoint**: `GET: /users/id/:id`
+
+**Authentication** Not required
+
+**URL Parameters**:
+
+- `id` - ObjectId string of the user document to look up
+
+**Response** (200):
+`JSON {"username": "johndoe"}`
+
+**Error Response**
+
+- `400 Bad Request` - id required
+- `404 Not Found` - User not found
+
 ## Committee Endpoints
 
 ### List All Committees
@@ -426,6 +452,93 @@ Updates committee information.
 
 - `400 Bad Request` - Invalid data or nothing to update
 - `403 Forbidden` - User does not have OWNER role
+- `404 Not Found` - Committee not found
+
+---
+
+### Update Voting Threshold (Chair Only)
+
+Updates the voting threshold for a committee.
+
+**Endpoint**: `PATCH /committees/:id/voting-threshold`
+
+**Authentication**: Required (CHAIR role only)
+
+**URL Parameters**:
+
+- `id` (ObjectId) - Committee ID
+
+**Request Body**:
+
+```json
+{
+  "votingThreshold": "SUPERMAJORITY"
+}
+```
+
+**Required Fields**:
+
+- `votingThreshold` (string) - Must be `"MAJORITY"` or `"SUPERMAJORITY"`
+
+**Response** (200):
+
+```json
+{
+  "_id": "65abc123def456789",
+  "name": "Technology Committee",
+  "votingThreshold": "SUPERMAJORITY",
+  "anonymousVoting": false,
+  "updatedAt": "2024-01-15T16:00:00Z"
+}
+```
+
+**Error Responses**:
+
+- `400 Bad Request` - Missing or invalid `votingThreshold`
+- `403 Forbidden` - User does not have CHAIR role
+- `404 Not Found` - Committee not found
+
+---
+
+### Update Anonymous Voting (Chair Only)
+
+Toggles whether individual votes are visible to members.
+
+**Endpoint**: `PATCH /committees/:id/anonymous-voting`
+
+**Authentication**: Required (CHAIR role only)
+
+**URL Parameters**:
+
+- `id` (ObjectId) - Committee ID
+
+**Request Body**:
+
+```json
+{
+  "anonymousVoting": true
+}
+```
+
+**Required Fields**:
+
+- `anonymousVoting` (boolean) - `true` hides individual ballots, `false` makes them visible
+
+**Response** (200):
+
+```json
+{
+  "_id": "65abc123def456789",
+  "name": "Technology Committee",
+  "anonymousVoting": true,
+  "updatedAt": "2024-01-15T16:05:00Z"
+}
+```
+
+**Error Responses**:
+
+- `400 Bad Request` - Missing or non-boolean `anonymousVoting`
+- `403 Forbidden` - User does not have CHAIR role
 - `404 Not Found` - Committee not found
 
 ---
@@ -901,6 +1014,117 @@ Opens the voting phase for a motion under debate.
 
 ---
 
+### Challenge Veto (Members)
+
+Allows committee members (non-chairs) to challenge a vetoed motion, moving it into a special review state.
+
+**Endpoint**: `POST /motions/:id/challenge-veto`
+
+**Authentication**: Required (OWNER or MEMBER role; CHAIR is explicitly blocked)
+
+**URL Parameters**:
+
+- `id` (ObjectId) - Motion ID
+
+**Response** (200):
+
+```json
+{
+  "_id": "65mno456pqr789012",
+  "status": "CHALLENGING_VETO",
+  "updatedAt": "2024-01-12T15:05:00Z"
+}
+```
+
+**Notes**:
+
+- Motion must currently be `VETOED`
+- Each motion can only be challenged once (`vetoChallengeConducted` flag prevents repeats)
+- After a challenge, the chair can reconsider via `/motions/:id/chair/approve`
+
+**Error Responses**:
+
+- `403 Forbidden` - Motion not vetoed, caller is the chair, or challenge already performed
+- `404 Not Found` - Motion not found
+
+---
+
+### Check Re-Proposal Eligibility
+
+Determines whether the authenticated user may re-propose a rejected motion.
+
+**Endpoint**: `GET /motions/:id/repropose/check`
+
+**Authentication**: Required
+
+**URL Parameters**:
+
+- `id` (ObjectId) - Original motion ID
+
+**Response** (200):
+
+```json
+{
+  "eligible": true
+}
+```
+
+**Notes**:
+
+- Motion must be in `REJECTED` status
+- Caller must have previously voted `OPPOSE` on the motion
+- When not eligible, response includes a `reason` message
+
+**Error Responses**:
+
+- `400 Bad Request` - Invalid motion ID
+- `401 Unauthorized` - User not authenticated
+- `404 Not Found` - Motion not found
+
+---
+
+### Re-Propose Rejected Motion
+
+Creates a fresh motion that copies the content of a rejected motion when the caller is eligible.
+
+**Endpoint**: `POST /motions/:id/repropose`
+
+**Authentication**: Required (OWNER or MEMBER role in the committee and must have voted `OPPOSE`)
+
+**URL Parameters**:
+
+- `id` (ObjectId) - Rejected motion ID
+
+**Response** (201):
+
+```json
+{
+  "_id": "66abc123def000111",
+  "committeeId": "65abc123def456789",
+  "authorId": "auth0|789012",
+  "title": "Approve new budget",
+  "description": "Motion to approve the 2024 budget",
+  "status": "PROPOSED",
+  "originalMotionId": "65mno456pqr789012",
+  "createdAt": "2024-02-01T10:00:00Z",
+  "updatedAt": "2024-02-01T10:00:00Z"
+}
+```
+
+**Notes**:
+
+- Only available when `check` endpoint returns `eligible: true`
+- New motion starts at `PROPOSED` status and links to the prior motion via `originalMotionId`
+
+**Error Responses**:
+
+- `400 Bad Request` - Invalid motion ID
+- `401 Unauthorized` - User not authenticated
+- `403 Forbidden` - Motion not rejected or caller never voted `OPPOSE`
+- `404 Not Found` - Motion not found
+
+---
+
 ## Debate Endpoints
 
 ### Create Debate Entry
@@ -1226,11 +1450,11 @@ const { user, error } = await authGuard(req, ["OWNER"], committeeId);
 Motion status follows a strict lifecycle with role-based transitions:
 
 ```
-PROPOSED → (any user besides motion author seconds) → SECONDED
-SECONDED → (CHAIR approves) → DEBATE
-SECONDED → (CHAIR vetos) → VETOED
-DEBATE → (CHAIR opens vote) → VOTING
-VOTING → (threshold reached) → PASSED or REJECTED
+PROPOSED --(non-author member seconds)--> SECONDED
+SECONDED --(chair approves)--> DEBATE --(chair opens vote)--> VOTING --(tally)--> PASSED / REJECTED
+SECONDED --(chair vetoes)--> VETOED --(member challenge)--> CHALLENGING_VETO --(chair re-approves)--> DEBATE
+CHALLENGING_VETO --(chair confirms veto)--> VETO_CONFIRMED
+REJECTED --(eligible opponent re-proposes)--> New motion in PROPOSED status
 ```
 
 **Voting Thresholds**: Determined by committee's `votingThreshold` setting (MAJORITY or SUPERMAJORITY)
@@ -1246,6 +1470,15 @@ From `SECONDED`:
 - → `DEBATE` (via `/motions/:id/chair/approve` with `action: "APPROVE"`)
 - → `VETOED` (via `/motions/:id/chair/approve` with `action: "VETO"`)
 
+From `VETOED`:
+
+- → `CHALLENGING_VETO` (via `/motions/:id/challenge-veto`)
+
+From `CHALLENGING_VETO`:
+
+- → `DEBATE` (via `/motions/:id/chair/approve` with `action: "APPROVE"`)
+- → `VETO_CONFIRMED` (chair records final veto outcome)
+
 From `DEBATE`:
 
 - → `VOTING` (via `/motions/:id/chair/open-vote`)
@@ -1254,6 +1487,10 @@ From `VOTING`:
 
 - → `PASSED` (automatically when threshold for support reached)
 - → `REJECTED` (automatically when threshold for against reached)
+
+From `REJECTED`:
+
+- → (new motion) `PROPOSED` (via `/motions/:id/repropose` when eligibility is met)
 
 ---
 
