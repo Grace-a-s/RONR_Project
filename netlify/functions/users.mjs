@@ -48,13 +48,11 @@ router.get("/users/:username", async ({ req, params }) => {
   return getUserByUsername(user, params.username);
 });
 
-//I dont think this is ncessary
-// Return only the username for a given user id
+// users.mjs line 50: wrap with authGuard
 router.get("/users/id/:id", async ({ req, params }) => {
-  // This endpoint is intentionally public (no auth required) because callers
-  // may need to resolve a username from an internal _id. If you want to
-  // restrict this, wrap with authGuard like other routes.
-  return getUsernameById(null, params.id);
+  const { user, error } = await authGuard(req);
+  if (error) return error; // <-- Add this check
+  return getUsernameById(user, params.id);
 });
 
 export default async function (req, context) {
