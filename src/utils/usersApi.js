@@ -27,7 +27,7 @@ export const useUsersApi = () => {
     (id) => {
       if (!id) throw new Error("id is required");
       // this endpoint is public; avoid forcing an auth token
-      return api.get(buildIdPath(id), { auth: false });
+      return api.get(buildIdPath(id));
     },
     [api]
   );
