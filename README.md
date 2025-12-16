@@ -87,19 +87,57 @@ The Owner has the ability to manage the roles of other users within the committe
 
 ### Website Walkthrough
 
-When the website is opened for the first time by a user they will be asked to log in/sign up. A real email is not required. Password strength requirements pop up for the user to reference. 
+When the website is opened for the first time by a user they will be asked to log in/sign up. A real email is not required. Password strength requirements pop up for the user to reference.
+
 <img width="1920" height="1128" alt="Screenshot 2025-12-16 115044" src="https://github.com/user-attachments/assets/65a1cae1-fb05-42af-999f-9de1f8bf826b" />
 <img width="1920" height="1128" alt="Screenshot 2025-12-16 115208" src="https://github.com/user-attachments/assets/c6f9c4e0-84c8-4da0-bf73-6cba80d37cd4" />
+
 Once the user has been authenticated they are brought to the landing page
+
 <img width="1920" height="1128" alt="Screenshot 2025-12-16 115304" src="https://github.com/user-attachments/assets/7771cd89-fb10-4eaf-8d95-54e81228cc77" />
-The username will be the beginning of their email until they change it on their profile (Shown later). The user can begin creating committees. By creating a committee they become the Owner. 
+
+The username will be the beginning of their email until they change it on their profile (Shown later). The user can begin creating committees. By creating a committee they become the Owner.
+
 <img width="1920" height="1128" alt="Screenshot 2025-12-16 115341" src="https://github.com/user-attachments/assets/5874b576-cee7-48b7-94eb-ef5ebb82ea0e" />
 <img width="1920" height="1128" alt="Screenshot 2025-12-16 115559" src="https://github.com/user-attachments/assets/a2ef6c55-241f-450c-a88e-965d79213545" />
-The user can then click in to a committee. If the user has been added as a Member to another committee by others it will show here as well. 
+
+The user can then click in to a committee. If the user has been added as a Member to another committee by others, it will show here as well. 
+
 <img width="1920" height="1128" alt="Screenshot 2025-12-16 115626" src="https://github.com/user-attachments/assets/6a022c49-eb0c-4b14-99f3-629353398ca6" />
-Once in a committee the user can click Manage/View Membership. Sicne this user is the Owner they can then add members and change member roles by double clicking on the role entry. 
+
+Once in a committee, the user can click Manage/View Membership. Since this user is the Owner they can then add members and change member roles by double clicking on the role entry in the table. 
+
 <img width="1920" height="1128" alt="Screenshot 2025-12-16 115651" src="https://github.com/user-attachments/assets/752c1403-6e6e-438c-93bb-95a23eb1e58a" />
 <img width="1920" height="1128" alt="Screenshot 2025-12-16 115752" src="https://github.com/user-attachments/assets/d396ee81-918a-4939-904e-ef0fd8947df2" />
+
+From the top navigation bar you can navigate to user profile and change the user information. 
+<img width="1920" height="1128" alt="Screenshot 2025-12-16 120438" src="https://github.com/user-attachments/assets/39c0ef30-5324-48dc-a17e-904d2496f340" />
+<img width="1920" height="1128" alt="Screenshot 2025-12-16 120514" src="https://github.com/user-attachments/assets/3fbec0fa-0f12-4a65-8ae8-11a7d63be971" />
+
+From the committee page we can create motions and click on "view details" to go to the motion. 
+
+<img width="1920" height="1128" alt="Screenshot 2025-12-16 122313" src="https://github.com/user-attachments/assets/1a4efd59-12d6-421f-8776-d7e54a1987b1" />
+<img width="1920" height="1128" alt="Screenshot 2025-12-16 122334" src="https://github.com/user-attachments/assets/0d24f802-312f-4c1a-b2f8-5c8e4633a199" />
+<img width="1920" height="1128" alt="Screenshot 2025-12-16 122612" src="https://github.com/user-attachments/assets/c6f4c107-ffcb-4468-a069-5a63abcf7bd1" />
+
+Another user will then second the motion and a chair must approve the motion in order for debate to begin. 
+Here is the chair's POV
+<img width="1920" height="1128" alt="Screenshot 2025-12-16 122831" src="https://github.com/user-attachments/assets/78d9978f-755f-4a6c-95e3-5d1cbd2338ec" />
+
+You can now debate, selecting your position and hitting send. Select view debate to see what has been said. 
+
+<img width="1920" height="1128" alt="Screenshot 2025-12-16 123507" src="https://github.com/user-attachments/assets/10a84320-ed4b-477a-95e7-6118e0ae8c54" />
+<img width="1920" height="1128" alt="Screenshot 2025-12-16 123523" src="https://github.com/user-attachments/assets/7b2d7b76-664c-40a3-a2e5-4e43b559725e" />
+
+Once the chair determines a motion has been sufficently debated they can then begin the vote
+Chair POV: 
+<img width="960" height="564" alt="Screenshot 2025-12-16 124356" src="https://github.com/user-attachments/assets/873cb1d3-eae9-45d9-9ce6-f514eaa0d4cb" />
+
+From the committee page we can search motions by contents or by their status using the pink drop down menu. This allows users to quickly navigate to the motions that require their attention. 
+<img width="1920" height="1128" alt="Screenshot 2025-12-16 123358" src="https://github.com/user-attachments/assets/f50d5575-463a-43ac-9d32-a941ad15360e" /><img width="1920" height="1128" alt="Screenshot 2025-12-16 123421" src="https://github.com/user-attachments/assets/fe6c15ea-b208-4a92-bc33-d84d04d5e0e1" />
+
+
+
 
 
 
