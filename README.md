@@ -4,7 +4,7 @@ A web application designed to facilitate asynchronous committee-based decision-m
 
 **Live Website**: https://bobsrules.netlify.app/
 
-**Demo**: [Insert demo video]
+**Demo**: https://youtu.be/-n7A_yzEaMk
 
 ## Table of Contents
 
