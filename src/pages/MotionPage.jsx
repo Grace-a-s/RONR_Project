@@ -535,6 +535,9 @@ function MotionPage() {
                           {reproposing ? <CircularProgress size={20} /> : 'Re-Propose Motion'}
                         </Button>
                       )}
+                      <Button variant="contained" onClick={toggleDebate}>
+                        View Debate
+                      </Button>
                     </>
                   ) : (
                     /* Show Second button for PROPOSED, or View Debate for DEBATE and later */
