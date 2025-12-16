@@ -266,7 +266,7 @@ Retrieve the username of user (based on ID, the unique identifier for user entri
 
 **EndPoint**: `GET: /users/id/:id`
 
-**Authentication** Not required
+**Authentication**: Required
 
 **URL Parameters**:
 
