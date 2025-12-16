@@ -7,13 +7,18 @@ import IconButton from '@mui/material/IconButton';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Alert from '@mui/material/Alert';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
+import Divider from '@mui/material/Divider';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import PersonAddAltIcon from '@mui/icons-material/PersonAddAlt';
+import HowToVoteIcon from '@mui/icons-material/HowToVote';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useMembershipsApi } from '../utils/membershipsApi';
 import { useUsersApi } from '../utils/usersApi';
+import { useCommitteesApi } from '../utils/committeesApi';
 
 const ROLE_OPTIONS = ['OWNER', 'CHAIR', 'MEMBER'];
 
@@ -30,11 +35,16 @@ function CommitteeMembershipPage() {
     const { user } = useAuth0();
     const { listMembers, addMember, removeMember, updateMemberRole } = useMembershipsApi(committeeId);
     const { getUserByUsername } = useUsersApi();
+    const { getCommittee, updateVotingThreshold, updateAnonymousVoting } = useCommitteesApi();
 
     const [rows, setRows] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isOwner, setIsOwner] = useState(false);
     const [hasChair, setHasChair] = useState(true);
+    const [isChair, setIsChair] = useState(false);
+    const [votingThreshold, setVotingThreshold] = useState('MAJORITY');
+    const [anonymousVoting, setAnonymousVoting] = useState(false);
+    const [thresholdMenuAnchor, setThresholdMenuAnchor] = useState(null);
 
     const mapMembers = useCallback((members = []) => (
         members.map((membership) => {
@@ -65,6 +75,7 @@ function CommitteeMembershipPage() {
             const currentUserId = user?.sub;
             setIsOwner(normalized.some((member) => member.userId === currentUserId && member.role === 'OWNER'));
             setHasChair(normalized.some((member) => member.role === 'CHAIR'));
+            setIsChair(normalized.some((member) => member.userId === currentUserId && member.role === 'CHAIR'));
         } catch (err) {
             console.error(err.message || 'Failed to load committee members');
         } finally {
@@ -75,6 +86,21 @@ function CommitteeMembershipPage() {
     useEffect(() => {
         refreshMembers();
     }, [refreshMembers]);
+
+    useEffect(() => {
+        const fetchCommittee = async () => {
+            if (!committeeId) return;
+            try {
+                const committeeData = await getCommittee(committeeId);
+                setVotingThreshold(committeeData?.votingThreshold || 'MAJORITY');
+                setAnonymousVoting(committeeData?.anonymousVoting || false);
+            } catch (err) {
+                console.error('Failed to load committee:', err);
+            }
+        };
+
+        fetchCommittee();
+    }, [committeeId, getCommittee]);
 
     const handleEdit = useCallback(async (row) => {
         const nextRole = window.prompt('Enter new role (OWNER, CHAIR, MEMBER)', row.role);
@@ -139,6 +165,28 @@ function CommitteeMembershipPage() {
         }
     }, [addMember, getUserByUsername, refreshMembers]);
 
+    const handleThresholdChange = useCallback(async (newThreshold) => {
+        try {
+            await updateVotingThreshold(committeeId, newThreshold);
+            setVotingThreshold(newThreshold);
+            setThresholdMenuAnchor(null);
+        } catch (err) {
+            console.error('Failed to update voting threshold:', err);
+            window.alert('Failed to update voting threshold. You may need CHAIR role.');
+        }
+    }, [committeeId, updateVotingThreshold]);
+
+    const handleAnonymousVotingChange = useCallback(async (newValue) => {
+        try {
+            await updateAnonymousVoting(committeeId, newValue);
+            setAnonymousVoting(newValue);
+            setThresholdMenuAnchor(null);
+        } catch (err) {
+            console.error('Failed to update anonymous voting:', err);
+            window.alert('Failed to update anonymous voting setting. You may need CHAIR role.');
+        }
+    }, [committeeId, updateAnonymousVoting]);
+
     const columns = useMemo(() => {
         const baseColumns = [
             { field: 'name', headerName: 'Name', flex: 1, minWidth: 150 },
@@ -184,24 +232,76 @@ function CommitteeMembershipPage() {
                 </Alert>
             )}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 2 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                            <IconButton
-                                aria-label="back to committee"
-                                onClick={() => {
-                                    if (committeeId) navigate(`/committee/${encodeURIComponent(committeeId)}`);
-                                    else navigate(-1);
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <IconButton
+                        aria-label="back to committee"
+                        onClick={() => {
+                                if (committeeId) navigate(`/committee/${encodeURIComponent(committeeId)}`);
+                                else navigate(-1);
                                 }}
-                                size="small"
+                        size="small"
+                    >
+                        <ArrowBackIcon />
+                    </IconButton>
+                    <Typography variant="h5">Membership</Typography>
+                </Box>
+
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                    {isChair && (
+                        <>
+                            <Button
+                                variant="outlined"
+                                startIcon={<HowToVoteIcon />}
+                                onClick={(e) => setThresholdMenuAnchor(e.currentTarget)}
                             >
-                                <ArrowBackIcon />
-                            </IconButton>
-                            <Typography variant="h5">Membership</Typography>
-                        </Box>
-                {isOwner && (
-                    <Button variant="contained" startIcon={<PersonAddAltIcon />} onClick={handleAddMember}>
-                        Add Member
-                    </Button>
-                )}
+                                Voting Settings
+                            </Button>
+                            <Menu
+                                anchorEl={thresholdMenuAnchor}
+                                open={Boolean(thresholdMenuAnchor)}
+                                onClose={() => setThresholdMenuAnchor(null)}
+                            >
+                                <Typography variant="caption" sx={{ px: 2, py: 1, color: 'text.secondary' }}>
+                                    VOTING THRESHOLD
+                                </Typography>
+                                <MenuItem
+                                    onClick={() => handleThresholdChange('MAJORITY')}
+                                    selected={votingThreshold === 'MAJORITY'}
+                                >
+                                    Majority (50% + 1)
+                                </MenuItem>
+                                <MenuItem
+                                    onClick={() => handleThresholdChange('SUPERMAJORITY')}
+                                    selected={votingThreshold === 'SUPERMAJORITY'}
+                                >
+                                    Supermajority (2/3)
+                                </MenuItem>
+                                <Divider sx={{ my: 1 }} />
+                                <Typography variant="caption" sx={{ px: 2, py: 1, color: 'text.secondary' }}>
+                                    VOTE VISIBILITY
+                                </Typography>
+                                <MenuItem
+                                    onClick={() => handleAnonymousVotingChange(false)}
+                                    selected={!anonymousVoting}
+                                >
+                                    Public Votes
+                                </MenuItem>
+                                <MenuItem
+                                    onClick={() => handleAnonymousVotingChange(true)}
+                                    selected={anonymousVoting}
+                                >
+                                    Anonymous Votes
+                                </MenuItem>
+                            </Menu>
+                        </>
+                    )}
+                    {isOwner && (
+                        <Button variant="contained" startIcon={<PersonAddAltIcon />} onClick={handleAddMember}>
+                            Add Member
+                        </Button>
+                    )}
+                </Box>
+
             </Box>
 
             <div style={{ width: '100%' }}>

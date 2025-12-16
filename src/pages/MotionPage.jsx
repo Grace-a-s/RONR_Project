@@ -28,6 +28,7 @@ import VotingPanel from '../components/VotingPanel';
 import { openVoting, chairApproveMotion } from '../lib/api';
 import { useMotionsApi } from '../utils/motionsApi';
 import { useMembershipsApi } from '../utils/membershipsApi';
+import { useCommitteesApi } from '../utils/committeesApi';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import { useUsersApi } from "../utils/usersApi";
 
@@ -36,10 +37,12 @@ function MotionPage() {
   const navigate = useNavigate();
 
   const { user, getAccessTokenSilently } = useAuth0();
-  const { getMotion, secondMotion, getDebates, createDebate } = useMotionsApi();
+  const { getMotion, secondMotion, getDebates, createDebate, reproposeMotion, checkReproposeEligibility } = useMotionsApi();
   const { listMembers } = useMembershipsApi(committeeId);
+  const { getCommittee } = useCommitteesApi();
 
   const [motion, setMotion] = useState(null);
+  const [committee, setCommittee] = useState(null);
   const [userRole, setUserRole] = useState(null);
   const [approvingMotion, setApprovingMotion] = useState(false);
   const [debates, setDebates] = useState([]);
@@ -58,6 +61,10 @@ function MotionPage() {
   const [debateUserMap, setDebateUserMap] = useState({}); // { [authorId]: { username, loading } }
   const inFlightRequestsRef = useRef({}); // { [id]: Promise }
   
+  const [canRepropose, setCanRepropose] = useState(false);
+  const [checkingEligibility, setCheckingEligibility] = useState(false);
+  const [reproposing, setReproposing] = useState(false);
+  const [originalMotion, setOriginalMotion] = useState(null);
 
   const polling_interval = 5000;  // 5 seconds - reduced polling frequency for better performance
 
@@ -80,6 +87,20 @@ function MotionPage() {
     }
   }, [motionId, getMotion]);
 
+  // Fetch committee data
+  useEffect(() => {
+    const fetchCommittee = async () => {
+      if (!committeeId) return;
+      try {
+        const committeeData = await getCommittee(committeeId);
+        setCommittee(committeeData);
+      } catch (error) {
+        console.error('Failed to load committee:', error);
+      }
+    };
+
+    fetchCommittee();
+  }, [committeeId, getCommittee]);
   // Poll for motion updates after initial load
   useAutoRefresh(async () => {
     if (motionId) {
@@ -204,6 +225,48 @@ function MotionPage() {
 
     return () => { mounted = false; };
   }, [debates, getUsernameById]);
+  // Check if current user can re-propose this rejected motion
+  useEffect(() => {
+    const checkEligibility = async () => {
+      if (!motion || !user?.sub || motion.status !== 'REJECTED') {
+        setCanRepropose(false);
+        return;
+      }
+
+      try {
+        setCheckingEligibility(true);
+        const result = await checkReproposeEligibility(motionId);
+        setCanRepropose(result.eligible === true);
+      } catch (error) {
+        console.error('Failed to check re-propose eligibility:', error);
+        setCanRepropose(false);
+      } finally {
+        setCheckingEligibility(false);
+      }
+    };
+
+    checkEligibility();
+  }, [motion, user?.sub, motionId, checkReproposeEligibility]);
+
+  // Fetch original motion if this is a re-proposed motion
+  useEffect(() => {
+    const fetchOriginalMotion = async () => {
+      if (!motion?.originalMotionId) {
+        setOriginalMotion(null);
+        return;
+      }
+
+      try {
+        const original = await getMotion(motion.originalMotionId);
+        setOriginalMotion(original);
+      } catch (error) {
+        console.error('Failed to load original motion:', error);
+        setOriginalMotion(null);
+      }
+    };
+
+    fetchOriginalMotion();
+  }, [motion?.originalMotionId, getMotion]);
 
   const handleSecond = async () => {
     if (!motion) return;
@@ -284,6 +347,21 @@ function MotionPage() {
     }
   };
 
+  const handleRepropose = async () => {
+    if (!motion) return;
+
+    try {
+      setReproposing(true);
+      const newMotion = await reproposeMotion(motionId);
+      navigate(`/committee/${encodeURIComponent(committeeId)}/motion/${newMotion._id}`);
+    } catch (error) {
+      console.error('Failed to re-propose motion:', error);
+      alert(error.message || 'Failed to re-propose motion.');
+    } finally {
+      setReproposing(false);
+    }
+  };
+
   // Check if motion has been seconded based on status
   const isSeconded = motion && motion.status !== 'PROPOSED';
   const isChair = userRole === 'CHAIR';
@@ -343,6 +421,22 @@ function MotionPage() {
               </Box>
               <Box sx={{ bgcolor: 'white', borderRadius: 1, mt: 2, p: 2 }}>
                 <Typography variant="body1" align="center" color="text.secondary" sx={{ whiteSpace: 'pre-wrap' }}>{motion.description}</Typography>
+
+                {originalMotion && (
+                  <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid #e0e0e0' }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                      Re-proposed from:
+                    </Typography>
+                    <Button
+                      variant="text"
+                      size="small"
+                      onClick={() => navigate(`/committee/${encodeURIComponent(committeeId)}/motion/${originalMotion._id}`)}
+                      sx={{ textTransform: 'none' }}
+                    >
+                      View Original Motion: {originalMotion.title}
+                    </Button>
+                  </Box>
+                )}
               </Box>
 
               <Box sx={{ mt: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -372,19 +466,33 @@ function MotionPage() {
                     <Chip
                       icon={<HourglassEmptyIcon sx={{ color: 'white !important' }} />}
                       label="Waiting for chair response"
-                      sx={{ 
-                        fontWeight: 500, 
-                        bgcolor: '#FF57BB', 
+                      sx={{
+                        fontWeight: 500,
+                        bgcolor: '#FF57BB',
                         color: 'white',
                         '& .MuiChip-icon': { color: 'white' }
                       }}
                     />
+                  ) : motion.status === 'REJECTED' ? (
+                    /* Show re-propose button for REJECTED motions if user voted OPPOSE */
+                    <>
+                      {canRepropose && (
+                        <Button
+                          variant="contained"
+                          color="primary"
+                          onClick={handleRepropose}
+                          disabled={reproposing || checkingEligibility}
+                        >
+                          {reproposing ? <CircularProgress size={20} /> : 'Re-Propose Motion'}
+                        </Button>
+                      )}
+                    </>
                   ) : (
                     /* Show Second button for PROPOSED, or View Debate for DEBATE and later */
                     <>
-                      <Button 
-                        variant="outlined" 
-                        onClick={handleSecond} 
+                      <Button
+                        variant="outlined"
+                        onClick={handleSecond}
                         disabled={isSeconded || seconding}
                       >
                         {seconding ? <CircularProgress size={20} /> : isSeconded ? 'Seconded' : 'Second'}
@@ -524,6 +632,7 @@ function MotionPage() {
         open={votingPanelOpen}
         onClose={() => setVotingPanelOpen(false)}
         motion={motion}
+        committee={committee}
         onVoteSuccess={handleVoteSuccess}
       />
     </>
