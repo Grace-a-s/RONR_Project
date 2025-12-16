@@ -23,8 +23,18 @@ const motionSchema = new Schema({
   },
   status: {
     type: String,
-    enum: ["PROPOSED", "SECONDED", "VETOED", "DEBATE", "VOTING", "PASSED", "REJECTED"],
+    enum: ["PROPOSED", "SECONDED", "VETOED", "CHALLENGING_VETO", "DEBATE", "VOTING", "PASSED", "REJECTED", "VETO_CONFIRMED"],
     default: "PROPOSED"
+  },
+  vetoChallengeConducted: {
+    type: Boolean,
+    default: false
+  },
+  originalMotionId: {
+    type: Schema.Types.ObjectId,
+    ref: 'Motion',
+    required: false,
+    default: null
   }
 }, {
   timestamps: true

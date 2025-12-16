@@ -26,20 +26,26 @@ import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty';
 import { useAuth0 } from "@auth0/auth0-react";
 import VotingPanel from '../components/VotingPanel';
 import LoadingPage from './LoadingPage.jsx';
-import { openVoting, chairApproveMotion } from '../lib/api';
+import { openVoting, chairApproveMotion, challengeVeto } from '../lib/api';
 import { useMotionsApi } from '../utils/motionsApi';
 import { useMembershipsApi } from '../utils/membershipsApi';
+import { useCommitteesApi } from '../utils/committeesApi';
 import { useAutoRefresh } from '../hooks/useAutoRefresh';
+import { useUsersApi } from "../utils/usersApi";
+import { getChipSxForStatus } from '../utils/statusColors';
 
 function MotionPage() {
   const { committeeId, motionId } = useParams();
   const navigate = useNavigate();
 
   const { user, getAccessTokenSilently } = useAuth0();
-  const { getMotion, secondMotion, getDebates, createDebate } = useMotionsApi();
+  const { getMotion, secondMotion, getDebates, createDebate, reproposeMotion, checkReproposeEligibility } = useMotionsApi();
   const { listMembers } = useMembershipsApi(committeeId);
+  const { getCommittee } = useCommitteesApi();
+
 
   const [motion, setMotion] = useState(null);
+  const [committee, setCommittee] = useState(null);
   const [userRole, setUserRole] = useState(null);
   const [approvingMotion, setApprovingMotion] = useState(false);
   const [debates, setDebates] = useState([]);
@@ -51,6 +57,17 @@ function MotionPage() {
   const [openingVote, setOpeningVote] = useState(false);
   const [seconding, setSeconding] = useState(false);
   const [submittingDebate, setSubmittingDebate] = useState(false);
+  const { getUsernameById } = useUsersApi();
+  const [author, setAuthor] = useState({ username: null });
+  const [loadingAuthor, setAuthorLoading] = useState(false);
+  const [debateUserMap, setDebateUserMap] = useState({}); // { [authorId]: { username, loading } }
+  const inFlightRequestsRef = useRef({}); // { [id]: Promise }
+  
+  const [canRepropose, setCanRepropose] = useState(false);
+  const [checkingEligibility, setCheckingEligibility] = useState(false);
+  const [reproposing, setReproposing] = useState(false);
+  const [originalMotion, setOriginalMotion] = useState(null);
+  const [challengingVeto, setChallengingVeto] = useState(false);
 
   const polling_interval = 5000;  // 5 seconds - reduced polling frequency for better performance
 
@@ -73,6 +90,20 @@ function MotionPage() {
     }
   }, [motionId, getMotion]);
 
+  // Fetch committee data
+  useEffect(() => {
+    const fetchCommittee = async () => {
+      if (!committeeId) return;
+      try {
+        const committeeData = await getCommittee(committeeId);
+        setCommittee(committeeData);
+      } catch (error) {
+        console.error('Failed to load committee:', error);
+      }
+    };
+
+    fetchCommittee();
+  }, [committeeId, getCommittee]);
   // Poll for motion updates after initial load
   useAutoRefresh(async () => {
     if (motionId) {
@@ -116,6 +147,129 @@ function MotionPage() {
       }
     }
   }, polling_interval, [showDebate, motionId, getDebates]);
+
+  //getting usernames, be in loading state until gets username (or fails)
+  useEffect(() => {
+    let mounted = true;
+    if (!motion || !motion.author) {
+      setAuthor({ username: null });
+      return () => { mounted = false; };
+      }
+  
+      (async () => {
+        try {
+          setAuthorLoading(true);
+          const data = await getUsernameById(motion.author);
+          if (!mounted) return;
+          // data may be an object like { username } or an error payload
+          if (data && typeof data === 'object' && 'username' in data) {
+              setAuthor({ username: data.username });
+              } else {
+              setAuthor({ username: null });
+              }
+        } catch (err) {
+            console.error('Failed to fetch username', err);
+            if (mounted) setAuthor({ username: null });
+        } finally {
+            if (mounted) setAuthorLoading(false);
+          }
+    })();
+  
+    return () => { mounted = false; };
+  }, [motion, getUsernameById]);
+
+  // Resolve usernames for debate entries; cache results in debateUserMap
+  useEffect(() => {
+    let mounted = true;
+    if (!debates || debates.length === 0) return;
+
+    // collect unique ids that we don't yet have cached
+    const idsToFetch = new Set();
+    debates.forEach((entry) => {
+      const rawId = entry.authorId;
+      const id = rawId && typeof rawId === 'object' ? rawId._id : rawId;
+      if (!id) return;
+      if (!debateUserMap[id]) idsToFetch.add(id);
+    });
+
+    if (idsToFetch.size === 0) return;
+
+    // mark them as loading in one update
+    setDebateUserMap((prev) => {
+      const next = { ...prev };
+      idsToFetch.forEach((id) => {
+        if (!next[id]) next[id] = { username: null, loading: true };
+      });
+      return next;
+    });
+
+    // fetch each id, deduplicating concurrent requests via inFlightRequestsRef
+    idsToFetch.forEach((id) => {
+      if (inFlightRequestsRef.current[id]) return; // already fetching
+
+      const p = (async () => {
+        try {
+          const data = await getUsernameById(id);
+          if (!mounted) return;
+          const username = data && typeof data === 'object' && 'username' in data ? data.username : null;
+          if (!mounted) return;
+          setDebateUserMap((prev) => ({ ...prev, [id]: { username, loading: false } }));
+        } catch (err) {
+          console.error('Failed to fetch debate username for', id, err);
+          if (!mounted) return;
+          setDebateUserMap((prev) => ({ ...prev, [id]: { username: null, loading: false } }));
+        } finally {
+          delete inFlightRequestsRef.current[id];
+        }
+      })();
+
+      inFlightRequestsRef.current[id] = p;
+    });
+
+    return () => { mounted = false; };
+  }, [debates, getUsernameById]);
+  // Check if current user can re-propose this rejected motion
+  useEffect(() => {
+    const checkEligibility = async () => {
+      if (!motion || !user?.sub || motion.status !== 'REJECTED') {
+        setCanRepropose(false);
+        return;
+      }
+
+      try {
+        setCheckingEligibility(true);
+        const result = await checkReproposeEligibility(motionId);
+        setCanRepropose(result.eligible === true);
+      } catch (error) {
+        console.error('Failed to check re-propose eligibility:', error);
+        setCanRepropose(false);
+      } finally {
+        setCheckingEligibility(false);
+      }
+    };
+
+    checkEligibility();
+  }, [motion, user?.sub, motionId, checkReproposeEligibility]);
+
+  // Fetch original motion if this is a re-proposed motion
+  useEffect(() => {
+    const fetchOriginalMotion = async () => {
+      if (!motion?.originalMotionId) {
+        setOriginalMotion(null);
+        return;
+      }
+
+      try {
+        const original = await getMotion(motion.originalMotionId);
+        setOriginalMotion(original);
+      } catch (error) {
+        console.error('Failed to load original motion:', error);
+        setOriginalMotion(null);
+      }
+    };
+
+    fetchOriginalMotion();
+  }, [motion?.originalMotionId, getMotion]);
 
   const handleSecond = async () => {
     if (!motion) return;
@@ -196,6 +350,37 @@ function MotionPage() {
     }
   };
 
+  const handleRepropose = async () => {
+    if (!motion) return;
+
+    try {
+      setReproposing(true);
+      const newMotion = await reproposeMotion(motionId);
+      navigate(`/committee/${encodeURIComponent(committeeId)}/motion/${newMotion._id}`);
+    } catch (error) {
+      console.error('Failed to re-propose motion:', error);
+      alert(error.message || 'Failed to re-propose motion.');
+    } finally {
+      setReproposing(false);
+    }
+  };
+
+  const handleChallengeVeto = async () => {
+    if (!motion) return;
+
+    try {
+      setChallengingVeto(true);
+      const token = await getAccessTokenSilently();
+      const updatedMotion = await challengeVeto(motionId, token);
+      setMotion(updatedMotion);
+    } catch (error) {
+      console.error('Failed to challenge veto:', error);
+      alert(error.message || 'Failed to challenge veto.');
+    } finally {
+      setChallengingVeto(false);
+    }
+  };
+
   // Check if motion has been seconded based on status
   const isSeconded = motion && motion.status !== 'PROPOSED';
   const isChair = userRole === 'CHAIR';
@@ -205,6 +390,21 @@ function MotionPage() {
   const isVotingOrLater = motion && ['VOTING', 'PASSED', 'REJECTED'].includes(motion.status);
   if (loading) 
     return <LoadingPage/>;
+  const isVetoedStatus = motion && motion.status === 'VETOED';
+  const isChallengingVeto = motion && motion.status === 'CHALLENGING_VETO';
+  const isVetoConfirmed = motion && motion.status === 'VETO_CONFIRMED';
+
+  // Determine whether the first N debate entries have resolved usernames
+  const debateInitialBatchSize = Math.min(5, debates.length);
+  const isInitialDebateBatchReady = debateInitialBatchSize === 0
+    ? true
+    : debates.slice(0, debateInitialBatchSize).every((entry) => {
+        const rawId = entry.authorId;
+        const id = rawId && typeof rawId === 'object' ? rawId._id : rawId;
+        const mapEntry = id ? debateUserMap[id] : null;
+        return mapEntry && mapEntry.loading === false;
+      });
+      
   if (!motion) return <Container sx={{ py: 6 }}><Typography>Motion not found</Typography></Container>;
 
   return (
@@ -237,6 +437,9 @@ function MotionPage() {
                     motion.status === 'PASSED' ? 'success' :
                     motion.status === 'REJECTED' ? 'error' :
                     motion.status === 'DEBATE' ? 'warning' :
+                    motion.status === 'VETOED' ? 'error' :
+                    motion.status === 'CHALLENGING_VETO' ? 'warning' :
+                    motion.status === 'VETO_CONFIRMED' ? 'error' :
                     'default'
                   }
                   sx={{ fontWeight: 600 }}
@@ -244,6 +447,22 @@ function MotionPage() {
               </Box>
               <Box sx={{ bgcolor: 'white', borderRadius: 1, mt: 2, p: 2 }}>
                 <Typography variant="body1" align="center" color="text.secondary" sx={{ whiteSpace: 'pre-wrap' }}>{motion.description}</Typography>
+
+                {originalMotion && (
+                  <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid #e0e0e0' }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                      Re-proposed from:
+                    </Typography>
+                    <Button
+                      variant="text"
+                      size="small"
+                      onClick={() => navigate(`/committee/${encodeURIComponent(committeeId)}/motion/${originalMotion._id}`)}
+                      sx={{ textTransform: 'none' }}
+                    >
+                      View Original Motion: {originalMotion.title}
+                    </Button>
+                  </Box>
+                )}
               </Box>
 
               <Box sx={{ mt: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -273,25 +492,71 @@ function MotionPage() {
                     <Chip
                       icon={<HourglassEmptyIcon sx={{ color: 'white !important' }} />}
                       label="Waiting for chair response"
-                      sx={{ 
-                        fontWeight: 500, 
-                        bgcolor: '#FF57BB', 
+                      sx={{
+                        fontWeight: 500,
+                        bgcolor: '#FF57BB',
                         color: 'white',
                         '& .MuiChip-icon': { color: 'white' }
                       }}
                     />
+                  ) : !isChair && isVetoedStatus && !motion.vetoChallengeConducted ? (
+                    /* Non-chair members can challenge veto */
+                    <Button
+                      variant="contained"
+                      color="warning"
+                      onClick={handleChallengeVeto}
+                      disabled={challengingVeto}
+                    >
+                      {challengingVeto ? <CircularProgress size={20} /> : 'Move to Overrule Veto'}
+                    </Button>
+                  ) : isVetoedStatus || isVetoConfirmed ? (
+                    /* Show status message for vetoed/veto confirmed */
+                    <Chip
+                      label={isVetoConfirmed ? "Veto Upheld" : "Vetoed by Chair"}
+                      sx={{
+                        fontWeight: 500,
+                        bgcolor: '#FF57BB',
+                        color: 'white'
+                      }}
+                    />
+                  ) : isChallengingVeto ? (
+                    /* Show active veto challenge status */
+                    <Chip
+                      icon={<HowToVoteIcon sx={{ color: 'white !important' }} />}
+                      label="Veto Challenge Vote In Progress"
+                      sx={{
+                        fontWeight: 500,
+                        bgcolor: '#FFA500',
+                        color: 'white',
+                        '& .MuiChip-icon': { color: 'white' }
+                      }}
+                    />
+                  ) : motion.status === 'REJECTED' ? (
+                    /* Show re-propose button for REJECTED motions if user voted OPPOSE */
+                    <>
+                      {canRepropose && (
+                        <Button
+                          variant="contained"
+                          color="primary"
+                          onClick={handleRepropose}
+                          disabled={reproposing || checkingEligibility}
+                        >
+                          {reproposing ? <CircularProgress size={20} /> : 'Re-Propose Motion'}
+                        </Button>
+                      )}
+                    </>
                   ) : (
                     /* Show Second button for PROPOSED, or View Debate for DEBATE and later */
                     <>
-                      <Button 
-                        variant="outlined" 
-                        onClick={handleSecond} 
+                      <Button
+                        variant="outlined"
+                        onClick={handleSecond}
                         disabled={isSeconded || seconding}
                       >
                         {seconding ? <CircularProgress size={20} /> : isSeconded ? 'Seconded' : 'Second'}
                       </Button>
 
-                      {isDebateOrLater && (
+                      {isDebateOrLater && !isVetoedStatus && !isVetoConfirmed && (
                         <Button variant="contained" onClick={toggleDebate}>
                           View Debate
                         </Button>
@@ -300,8 +565,8 @@ function MotionPage() {
                   )}
                 </Box>
 
-                {/* Only show Voting button when motion is in VOTING or later */}
-                {isVotingOrLater && (
+                {/* Show Voting button when motion is in VOTING, CHALLENGING_VETO, or later */}
+                {(isVotingOrLater || isChallengingVeto) && (
                   <Button
                     variant="outlined"
                     onClick={() => setVotingPanelOpen(true)}
@@ -319,38 +584,58 @@ function MotionPage() {
               <Paper elevation={1} sx={{ p: 2, maxWidth: 900, width: '100%' }}>
                 <Typography variant="subtitle1" gutterBottom>Debate</Typography>
 
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: { xs: '240px', md: '360px' }, overflow: 'auto', pr: 1, pb: { xs: '140px', md: '100px' } }}>
-                  {debates.map((entry, i) => (
-                    <Paper key={entry._id || i} variant="outlined" sx={{ p: 2, display: 'flex', gap: 2, alignItems: 'flex-start' }}>
-                      <Avatar sx={{ bgcolor: (theme) => theme.palette.primary.main, width: 40, height: 40, flexShrink: 0 }}>
-                        {entry.authorId ? String(entry.authorId)[0].toUpperCase() : 'M'}
-                      </Avatar>
-
-                      <Box sx={{ flex: 1 }}>
-                        <Typography variant="caption" color="text.secondary">
-                          {entry.authorId || 'Member'} · {entry.createdAt ? new Date(entry.createdAt).toLocaleString() : `#${i + 1}`}
-                          {entry.position && (
-                            <Chip 
-                              label={entry.position} 
-                              size="small" 
-                              sx={{ ml: 1 }}
-                              color={
-                                entry.position === 'SUPPORT' ? 'success' :
-                                entry.position === 'OPPOSE' ? 'error' :
-                                'default'
-                              }
-                            />
-                          )}
-                        </Typography>
-
-                        <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', mt: 1 }}>
-                          {entry.content}
-                        </Typography>
-                      </Box>
-                    </Paper>
-                  ))}
-                  {debates.length === 0 && (
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 2,
+                    maxHeight: { xs: '240px', md: '360px' },
+                    overflowY: 'auto',
+                    overflowX: 'hidden',
+                    overscrollBehavior: 'contain',
+                    pr: 1,
+                    pb: { xs: '140px', md: '100px' },
+                  }}
+                >
+                  {debates.length === 0 ? (
                     <Typography color="text.secondary" align="center">No debate entries yet.</Typography>
+                  ) : (
+                    debates.map((entry, i) => {
+                      const rawId = entry.authorId;
+                      const id = rawId && typeof rawId === 'object' ? rawId._id : rawId;
+                      const mapEntry = id ? debateUserMap[id] : null;
+                      const displayName = mapEntry?.loading ? 'Loading...' : mapEntry?.username || 'Member';
+
+                      return (
+                        <Paper key={entry._id || i} variant="outlined" sx={{ p: 2, display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+                          <Avatar sx={{ bgcolor: (theme) => theme.palette.primary.main, width: 40, height: 40, flexShrink: 0 }}>
+                            {id ? String(id)[0].toUpperCase() : 'M'}
+                          </Avatar>
+
+                          <Box sx={{ flex: 1 }}>
+                            <Typography variant="caption" color="text.secondary">
+                              {displayName} · {entry.createdAt ? new Date(entry.createdAt).toLocaleString() : `#${i + 1}`}
+                              {entry.position && (
+                                <Chip
+                                  label={entry.position}
+                                  size="small"
+                                  sx={{ ml: 1 }}
+                                  color={
+                                    entry.position === 'SUPPORT' ? 'success' :
+                                    entry.position === 'OPPOSE' ? 'error' :
+                                    'default'
+                                  }
+                                />
+                              )}
+                            </Typography>
+
+                            <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', mt: 1 }}>
+                              {entry.content}
+                            </Typography>
+                          </Box>
+                        </Paper>
+                      );
+                    })
                   )}
                 </Box>
               </Paper>
@@ -414,6 +699,7 @@ function MotionPage() {
         open={votingPanelOpen}
         onClose={() => setVotingPanelOpen(false)}
         motion={motion}
+        committee={committee}
         onVoteSuccess={handleVoteSuccess}
       />
     </>

@@ -11,6 +11,7 @@ import Tooltip from '@mui/material/Tooltip';
 import Logout from '@mui/icons-material/Logout';
 import Settings from '@mui/icons-material/Settings';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
+import InfoIcon from '@mui/icons-material/Info';
 import { useNavigate } from 'react-router-dom';
 import { useAuth0 } from "@auth0/auth0-react";
 
@@ -40,7 +41,12 @@ function NavBar() {
         setAnchorEl(null);
         navigate('/user-profile');
     };
-    
+
+    const openUserRolesPage = () => {
+        setAnchorEl(null);
+        navigate('/user-roles');
+    };
+
     return (
         <>
             <AppBar position="static" sx={{ backgroundColor: 'primary.main', color: '#fff' }} elevation={0}>
@@ -83,6 +89,12 @@ function NavBar() {
                         <Settings fontSize="small" />
                     </ListItemIcon>
                     My Profile
+                </MenuItem>
+                <MenuItem onClick={openUserRolesPage}>
+                    <ListItemIcon>
+                        <InfoIcon fontSize="small" />
+                    </ListItemIcon>
+                    User Roles
                 </MenuItem>
                 <MenuItem onClick={handleSignOut}>
                     <ListItemIcon>
