@@ -1,0 +1,1531 @@
+# Backend API Documentation
+
+This document describes the HTTP APIs used by the backend service. All endpoints are secured using JWT-based authentication and follow RESTful conventions.
+
+## Table of Contents
+
+1. [Overview](#overview)
+2. [Authentication](#authentication)
+   - [Authentication Header](#authentication-header)
+   - [Token Validation](#token-validation)
+   - [User Identification](#user-identification)
+3. [Base URL](#base-url)
+4. [Common Response Formats](#common-response-formats)
+   - [Success Response](#success-response)
+   - [Error Response](#error-response)
+   - [HTTP Status Codes](#http-status-codes)
+5. [API Endpoints](#api-endpoints)
+   - [User Endpoints](#user-endpoints)
+     - [Get Current User](#get-current-user)
+     - [Create or Update Current User](#create-or-update-current-user)
+     - [Get User by Username](#get-user-by-username)
+     - [Get Username by ID](#get-username-by-id)
+   - [Committee Endpoints](#committee-endpoints)
+     - [List All Committees](#list-all-committees)
+     - [Create Committee](#create-committee)
+     - [Get Committee by ID](#get-committee-by-id)
+     - [Update Committee](#update-committee)
+     - [Update Voting Threshold (Chair Only)](#update-voting-threshold-chair-only)
+     - [Update Anonymous Voting (Chair Only)](#update-anonymous-voting-chair-only)
+   - [Membership Endpoints](#membership-endpoints)
+     - [Get Committee Members](#get-committee-members)
+     - [Add Committee Member](#add-committee-member)
+     - [Remove Committee Member](#remove-committee-member)
+     - [Change Member Role](#change-member-role)
+   - [Motion Endpoints](#motion-endpoints)
+     - [List Committee Motions](#list-committee-motions)
+     - [Create Motion](#create-motion)
+     - [Get Motion Details](#get-motion-details)
+     - [Second a Motion](#second-a-motion)
+     - [Approve or Veto Motion (Chair Only)](#approve-or-veto-motion-chair-only)
+     - [Open Voting (Chair Only)](#open-voting-chair-only)
+     - [Challenge Veto (Members)](#challenge-veto-members)
+     - [Check Re-Proposal Eligibility](#check-re-proposal-eligibility)
+     - [Re-Propose Rejected Motion](#re-propose-rejected-motion)
+   - [Debate Endpoints](#debate-endpoints)
+     - [Create Debate Entry](#create-debate-entry)
+     - [List Debate Entries](#list-debate-entries)
+   - [Vote Endpoints](#vote-endpoints)
+     - [Cast Vote](#cast-vote)
+     - [List Votes](#list-votes)
+6. [Error Handling](#error-handling)
+   - [Standard Error Format](#standard-error-format)
+   - [Common Error Scenarios](#common-error-scenarios)
+     - [Authentication Errors (401)](#authentication-errors-401)
+     - [Permission Errors (403)](#permission-errors-403)
+     - [Validation Errors (400)](#validation-errors-400)
+     - [Not Found Errors (404)](#not-found-errors-404)
+     - [Conflict Errors (409)](#conflict-errors-409)
+7. [Role-Based Access Control](#role-based-access-control)
+   - [Committee Roles](#committee-roles)
+   - [Role Enforcement](#role-enforcement)
+   - [Motion Status Transitions](#motion-status-transitions)
+   - [Valid Transitions](#valid-transitions)
+8. [Data Validation](#data-validation)
+   - [String Normalization](#string-normalization)
+   - [ID Validation](#id-validation)
+   - [Duplicate Prevention](#duplicate-prevention)
+9. [Database Connection](#database-connection)
+
+---
+
+## Overview
+
+This API provides a complete backend service for a parliamentary-style committee decision-making system based on Robert's Rules of Order. The system manages users, committees, motions, debates, and votes with role-based permissions.
+
+## Authentication
+
+All API endpoints require authentication using JWT (JSON Web Tokens) issued by Auth0.
+
+### Authentication Header
+
+```
+Authorization: Bearer <JWT_TOKEN>
+```
+
+### Token Validation
+
+- **Issuer**: Auth0 domain (`https://${AUTH0_DOMAIN}/`)
+- **Audience**: Auth0 API identifier
+- **Verification**: JWKs (JSON Web Key Set) from Auth0
+
+### User Identification
+
+The authenticated user is identified by the `sub` (subject) field in the JWT payload, which corresponds to the Auth0 user ID.
+
+## Base URL
+
+```
+/.netlify/functions/
+```
+
+All endpoints are deployed as Netlify serverless functions.
+
+## Common Response Formats
+
+### Success Response
+
+```json
+{
+  "_id": "ObjectId or String",
+  "field1": "value1",
+  "field2": "value2",
+  "createdAt": "ISO8601 timestamp",
+  "updatedAt": "ISO8601 timestamp"
+}
+```
+
+**Notes**:
+
+- `_id` is ObjectId for most collections, but String (Auth0 ID) for Users
+- Timestamps are automatically managed by Mongoose `timestamps: true` option
+- `updatedAt` field is automatically updated on document modifications
+
+### Error Response
+
+```json
+{
+  "error": "Error message describing what went wrong"
+}
+```
+
+### HTTP Status Codes
+
+- `200 OK` - Request successful
+- `400 Bad Request` - Invalid request parameters
+- `401 Unauthorized` - Missing or invalid authentication
+- `403 Forbidden` - Insufficient permissions
+- `404 Not Found` - Resource not found
+- `409 Conflict` - Resource conflict (e.g., duplicate username)
+- `500 Internal Server Error` - Server error
+
+---
+
+## API Endpoints
+
+## User Endpoints
+
+### Get Current User
+
+Retrieves the authenticated user's profile.
+
+**Endpoint**: `GET /users/me`
+
+**Authentication**: Required
+
+**Response** (200):
+
+```json
+{
+  "_id": "auth0|123456",
+  "username": "johndoe",
+  "email": "john@example.com",
+  "firstName": "John",
+  "lastName": "Doe",
+  "pronouns": "he/him",
+  "about": "Software developer",
+  "createdAt": "2024-01-15T10:30:00Z",
+  "updatedAt": "2024-01-15T10:30:00Z"
+}
+```
+
+**Error Responses**:
+
+- `401 Unauthorized` - Missing or invalid token
+- `404 Not Found` - User not found
+
+---
+
+### Create or Update Current User
+
+Creates a new user or updates the authenticated user's profile.
+
+**Endpoint**: `POST /users/me`
+
+**Authentication**: Required
+
+**Request Body**:
+
+```json
+{
+  "username": "johndoe",
+  "email": "john@example.com",
+  "firstName": "John",
+  "lastName": "Doe",
+  "pronouns": "he/him",
+  "about": "Software developer"
+}
+```
+
+**Notes**:
+
+- If user exists, performs update operation
+- If user doesn't exist, creates new user
+- `auth0Id` is automatically extracted from JWT token
+- All string fields are normalized (trimmed, null if empty)
+
+**Response** (200):
+
+```json
+{
+  "_id": "auth0|123456",
+  "username": "johndoe",
+  "email": "john@example.com",
+  "firstName": "John",
+  "lastName": "Doe",
+  "pronouns": "he/him",
+  "about": "Software developer",
+  "createdAt": "2024-01-15T10:30:00Z",
+  "updatedAt": "2024-01-15T10:30:00Z"
+}
+```
+
+**Error Responses**:
+
+- `400 Bad Request` - Missing required fields or invalid data
+- `409 Conflict` - Username already exists
+
+---
+
+### Get User by Username
+
+Retrieves a user's public profile by username.
+
+**Endpoint**: `GET /users/:username`
+
+**Authentication**: Required
+
+**URL Parameters**:
+
+- `username` (string) - The username to look up
+
+**Response** (200):
+
+```json
+{
+  "_id": "auth0|123456",
+  "username": "johndoe",
+  "email": "john@example.com",
+  "firstName": "John",
+  "lastName": "Doe",
+  "pronouns": "he/him",
+  "about": "Software developer"
+}
+```
+
+**Error Responses**:
+
+- `400 Bad Request` - Username not provided
+- `404 Not Found` - User not found
+
+---
+
+### Get Username by ID
+
+Retrieve the username of user (based on ID, the unique identifier for user entries)
+
+**EndPoint**: `GET: /users/id/:id`
+
+**Authentication** Not required
+
+**URL Parameters**:
+
+- `id` - ObjectId string of the user document to look up
+
+**Response** (200):
+`JSON {"username": "johndoe"}`
+
+**Error Response**
+
+- `400 Bad Request` - id required
+- `404 Not Found` - User not found
+
+## Committee Endpoints
+
+### List All Committees
+
+Retrieves all committees that the authenticated user is a member of.
+
+**Endpoint**: `GET /committees`
+
+**Authentication**: Required
+
+**Response** (200):
+
+```json
+[
+  {
+    "_id": "65abc123def456789",
+    "name": "Technology Committee",
+    "description": "Oversees technology initiatives",
+    "votingThreshold": "MAJORITY",
+    "anonymousVoting": false,
+    "createdAt": "2024-01-10T09:00:00Z",
+    "updatedAt": "2024-01-10T09:00:00Z",
+    "membersCount": 5,
+    "motionsCount": 3
+  }
+]
+```
+
+**Notes**:
+
+- Returns committees where user has an active membership
+- Includes aggregated counts for members and motions
+- Returns empty array if user has no memberships
+- `votingThreshold`: "MAJORITY" (>50%) or "SUPERMAJORITY" (≥67%)
+- `anonymousVoting`: When true, vote details are not publicly visible
+
+---
+
+### Create Committee
+
+Creates a new committee with the authenticated user as the owner.
+
+**Endpoint**: `POST /committees`
+
+**Authentication**: Required
+
+**Request Body**:
+
+```json
+{
+  "name": "Technology Committee",
+  "description": "Oversees technology initiatives",
+  "votingThreshold": "MAJORITY",
+  "anonymousVoting": false
+}
+```
+
+**Required Fields**:
+
+- `name` (string) - Committee name
+
+**Optional Fields**:
+
+- `description` (string) - Committee description
+- `votingThreshold` (string) - "MAJORITY" or "SUPERMAJORITY" (default: "MAJORITY")
+- `anonymousVoting` (boolean) - Whether votes are anonymous (default: false)
+
+**Response** (200):
+
+```json
+{
+  "_id": "65abc123def456789",
+  "name": "Technology Committee",
+  "description": "Oversees technology initiatives",
+  "votingThreshold": "MAJORITY",
+  "anonymousVoting": false,
+  "createdAt": "2024-01-10T09:00:00Z",
+  "updatedAt": "2024-01-10T09:00:00Z"
+}
+```
+
+**Notes**:
+
+- Automatically creates a membership record with `OWNER` role for the creator
+
+**Error Responses**:
+
+- `400 Bad Request` - Missing name
+
+---
+
+### Get Committee by ID
+
+Retrieves detailed information about a specific committee.
+
+**Endpoint**: `GET /committees/:id`
+
+**Authentication**: Required
+
+**URL Parameters**:
+
+- `id` (ObjectId) - Committee ID
+
+**Response** (200):
+
+```json
+{
+  "_id": "65abc123def456789",
+  "name": "Technology Committee",
+  "description": "Oversees technology initiatives",
+  "votingThreshold": "MAJORITY",
+  "anonymousVoting": false,
+  "createdAt": "2024-01-10T09:00:00Z",
+  "updatedAt": "2024-01-10T09:00:00Z"
+}
+```
+
+**Error Responses**:
+
+- `400 Bad Request` - Invalid committee ID format
+- `404 Not Found` - Committee not found
+
+---
+
+### Update Committee
+
+Updates committee information.
+
+**Endpoint**: `PATCH /committees/:id`
+
+**Authentication**: Required (OWNER role only)
+
+**URL Parameters**:
+
+- `id` (ObjectId) - Committee ID
+
+**Request Body**:
+
+```json
+{
+  "name": "Updated Committee Name",
+  "description": "Updated description",
+  "votingThreshold": "SUPERMAJORITY",
+  "anonymousVoting": true
+}
+```
+
+**Updateable Fields**:
+
+- `name` (string) - Committee name
+- `description` (string) - Committee description
+- `votingThreshold` (string) - "MAJORITY" or "SUPERMAJORITY"
+- `anonymousVoting` (boolean) - Whether votes are anonymous
+
+**Response** (200):
+
+```json
+{
+  "_id": "65abc123def456789",
+  "name": "Updated Committee Name",
+  "description": "Updated description",
+  "votingThreshold": "SUPERMAJORITY",
+  "anonymousVoting": true,
+  "createdAt": "2024-01-10T09:00:00Z",
+  "updatedAt": "2024-01-15T14:30:00Z"
+}
+```
+
+**Error Responses**:
+
+- `400 Bad Request` - Invalid data or nothing to update
+- `403 Forbidden` - User does not have OWNER role
+- `404 Not Found` - Committee not found
+
+---
+
+### Update Voting Threshold (Chair Only)
+
+Updates the voting threshold for a committee.
+
+**Endpoint**: `PATCH /committees/:id/voting-threshold`
+
+**Authentication**: Required (CHAIR role only)
+
+**URL Parameters**:
+
+- `id` (ObjectId) - Committee ID
+
+**Request Body**:
+
+```json
+{
+  "votingThreshold": "SUPERMAJORITY"
+}
+```
+
+**Required Fields**:
+
+- `votingThreshold` (string) - Must be `"MAJORITY"` or `"SUPERMAJORITY"`
+
+**Response** (200):
+
+```json
+{
+  "_id": "65abc123def456789",
+  "name": "Technology Committee",
+  "votingThreshold": "SUPERMAJORITY",
+  "anonymousVoting": false,
+  "updatedAt": "2024-01-15T16:00:00Z"
+}
+```
+
+**Error Responses**:
+
+- `400 Bad Request` - Missing or invalid `votingThreshold`
+- `403 Forbidden` - User does not have CHAIR role
+- `404 Not Found` - Committee not found
+
+---
+
+### Update Anonymous Voting (Chair Only)
+
+Toggles whether individual votes are visible to members.
+
+**Endpoint**: `PATCH /committees/:id/anonymous-voting`
+
+**Authentication**: Required (CHAIR role only)
+
+**URL Parameters**:
+
+- `id` (ObjectId) - Committee ID
+
+**Request Body**:
+
+```json
+{
+  "anonymousVoting": true
+}
+```
+
+**Required Fields**:
+
+- `anonymousVoting` (boolean) - `true` hides individual ballots, `false` makes them visible
+
+**Response** (200):
+
+```json
+{
+  "_id": "65abc123def456789",
+  "name": "Technology Committee",
+  "anonymousVoting": true,
+  "updatedAt": "2024-01-15T16:05:00Z"
+}
+```
+
+**Error Responses**:
+
+- `400 Bad Request` - Missing or non-boolean `anonymousVoting`
+- `403 Forbidden` - User does not have CHAIR role
+- `404 Not Found` - Committee not found
+
+---
+
+## Membership Endpoints
+
+### Get Committee Members
+
+Retrieves all members of a committee.
+
+**Endpoint**: `GET /committees/:id/member`
+
+**Authentication**: Required
+
+**URL Parameters**:
+
+- `id` (ObjectId) - Committee ID
+
+**Response** (200):
+
+```json
+[
+  {
+    "_id": "65def789abc123456",
+    "committeeId": "65abc123def456789",
+    "userId": {
+      "_id": "auth0|123456",
+      "username": "johndoe",
+      "email": "john@example.com",
+      "firstName": "John",
+      "lastName": "Doe"
+    },
+    "role": "OWNER",
+    "createdAt": "2024-01-10T09:00:00Z",
+    "updatedAt": "2024-01-10T09:00:00Z"
+  }
+]
+```
+
+**Notes**:
+
+- User information is populated from the User collection
+
+**Error Responses**:
+
+- `400 Bad Request` - Invalid committee ID
+- `404 Not Found` - Committee not found
+
+---
+
+### Add Committee Member
+
+Adds one or more members to a committee.
+
+**Endpoint**: `POST /committees/:id/member`
+
+**Authentication**: Required (OWNER role only)
+
+**URL Parameters**:
+
+- `id` (ObjectId) - Committee ID
+
+**Request Body** (Single member):
+
+```json
+{
+  "userId": "auth0|789012",
+  "role": "MEMBER"
+}
+```
+
+**Request Body** (Multiple members):
+
+```json
+[
+  {
+    "userId": "auth0|789012",
+    "role": "MEMBER"
+  },
+  {
+    "userId": "auth0|345678",
+    "role": "CHAIR"
+  }
+]
+```
+
+**Required Fields**:
+
+- `userId` (string) - Auth0 user ID
+
+**Optional Fields**:
+
+- `role` (string) - Member role (default: "MEMBER")
+
+**Valid Roles**:
+
+- `MEMBER` - Regular committee member
+- `CHAIR` - Committee chair
+- `OWNER` - Committee owner
+
+**Response** (200):
+
+```json
+[
+  {
+    "_id": "65ghi012jkl345678",
+    "committeeId": "65abc123def456789",
+    "userId": "auth0|789012",
+    "role": "MEMBER",
+    "createdAt": "2024-01-15T10:00:00Z",
+    "updatedAt": "2024-01-15T10:00:00Z"
+  }
+]
+```
+
+**Notes**:
+
+- Prevents duplicate memberships (returns existing membership if already exists)
+- Can add multiple members in a single request
+
+**Error Responses**:
+
+- `400 Bad Request` - Invalid data
+- `403 Forbidden` - User does not have OWNER role
+
+---
+
+### Remove Committee Member
+
+Removes a member from a committee.
+
+**Endpoint**: `DELETE /committees/:id/member`
+
+**Authentication**: Required (OWNER role only)
+
+**URL Parameters**:
+
+- `id` (ObjectId) - Committee ID
+
+**Request Body**:
+
+```json
+{
+  "userId": "auth0|789012"
+}
+```
+
+**Required Fields**:
+
+- `userId` (string) - Auth0 user ID to remove
+
+**Response** (200):
+
+```json
+{
+  "deletedCount": 1
+}
+```
+
+**Error Responses**:
+
+- `400 Bad Request` - Missing userId or invalid committee ID
+- `403 Forbidden` - User does not have OWNER role
+
+---
+
+### Change Member Role
+
+Changes a committee member's role.
+
+**Endpoint**: `PATCH /committees/:id/member`
+
+**Authentication**: Required (OWNER role only)
+
+**URL Parameters**:
+
+- `id` (ObjectId) - Committee ID
+
+**Request Body**:
+
+```json
+{
+  "userId": "auth0|789012",
+  "role": "CHAIR"
+}
+```
+
+**Required Fields**:
+
+- `userId` (string) - Auth0 user ID
+- `role` (string) - New role (MEMBER, CHAIR, or OWNER)
+
+**Response** (200):
+
+```json
+{
+  "_id": "65ghi012jkl345678",
+  "committeeId": "65abc123def456789",
+  "userId": "auth0|789012",
+  "role": "CHAIR",
+  "createdAt": "2024-01-15T10:00:00Z",
+  "updatedAt": "2024-01-15T11:30:00Z"
+}
+```
+
+**Error Responses**:
+
+- `400 Bad Request` - Missing required fields
+- `403 Forbidden` - User does not have OWNER role
+- `404 Not Found` - Membership not found
+
+---
+
+## Motion Endpoints
+
+### List Committee Motions
+
+Retrieves all motions for a specific committee.
+
+**Endpoint**: `GET /committees/:committeeId/motions`
+
+**Authentication**: Required
+
+**URL Parameters**:
+
+- `committeeId` (ObjectId) - Committee ID
+
+**Response** (200):
+
+```json
+[
+  {
+    "_id": "65mno456pqr789012",
+    "committeeId": "65abc123def456789",
+    "authorId": "auth0|123456",
+    "title": "Approve new budget",
+    "description": "Motion to approve the 2024 budget",
+    "status": "VOTING",
+    "originalMotionId": null,
+    "createdAt": "2024-01-12T14:00:00Z",
+    "updatedAt": "2024-01-12T15:30:00Z"
+  }
+]
+```
+
+**Notes**:
+
+- Motions are sorted by creation date (newest first)
+- `originalMotionId` will be set if this is an amended version of another motion
+
+**Error Responses**:
+
+- `400 Bad Request` - Invalid committee ID
+
+---
+
+### Create Motion
+
+Creates a new motion in a committee.
+
+**Endpoint**: `POST /committees/:committeeId/motions`
+
+**Authentication**: Required (MEMBER or OWNER role)
+
+**URL Parameters**:
+
+- `committeeId` (ObjectId) - Committee ID
+
+**Request Body**:
+
+```json
+{
+  "title": "Approve new budget",
+  "description": "Motion to approve the 2024 budget with increased allocation for infrastructure"
+}
+```
+
+**Required Fields**:
+
+- `title` (string) - Motion title
+- `description` (string) - Detailed motion description
+
+**Response** (200):
+
+```json
+{
+  "_id": "65mno456pqr789012",
+  "committeeId": "65abc123def456789",
+  "authorId": "auth0|123456",
+  "title": "Approve new budget",
+  "description": "Motion to approve the 2024 budget with increased allocation for infrastructure",
+  "status": "PROPOSED",
+  "originalMotionId": null,
+  "createdAt": "2024-01-12T14:00:00Z",
+  "updatedAt": "2024-01-12T14:00:00Z"
+}
+```
+
+**Notes**:
+
+- New motions start with status `PROPOSED`
+- Author ID is automatically set from authenticated user
+- `originalMotionId` is null for new motions
+
+**Error Responses**:
+
+- `400 Bad Request` - Missing required fields or invalid committee ID
+- `403 Forbidden` - User lacks required role
+- `404 Not Found` - Committee not found
+
+---
+
+### Get Motion Details
+
+Retrieves detailed information about a specific motion.
+
+**Endpoint**: `GET /motions/:id`
+
+**Authentication**: Required
+
+**URL Parameters**:
+
+- `id` (ObjectId) - Motion ID
+
+**Response** (200):
+
+```json
+{
+  "_id": "65mno456pqr789012",
+  "committeeId": "65abc123def456789",
+  "authorId": "auth0|123456",
+  "title": "Approve new budget",
+  "description": "Motion to approve the 2024 budget",
+  "status": "VOTING",
+  "originalMotionId": null,
+  "createdAt": "2024-01-12T14:00:00Z",
+  "updatedAt": "2024-01-12T15:30:00Z"
+}
+```
+
+**Error Responses**:
+
+- `400 Bad Request` - Invalid motion ID
+- `404 Not Found` - Motion not found
+
+---
+
+### Second a Motion
+
+Allows a member to second a motion.
+
+**Endpoint**: `POST /motions/:id/second`
+
+**Authentication**: Required (any authenticated user except the motion author)
+
+**URL Parameters**:
+
+- `id` (ObjectId) - Motion ID
+
+**Response** (200):
+
+```json
+{
+  "_id": "65mno456pqr789012",
+  "committeeId": "65abc123def456789",
+  "authorId": "auth0|123456",
+  "title": "Approve new budget",
+  "description": "Motion to approve the 2024 budget",
+  "status": "SECONDED",
+  "originalMotionId": null,
+  "createdAt": "2024-01-12T14:00:00Z",
+  "updatedAt": "2024-01-12T14:05:00Z"
+}
+```
+
+**Notes**:
+
+- Changes motion status from `PROPOSED` to `SECONDED`
+- Motion author cannot second their own motion
+
+**Error Responses**:
+
+- `403 Forbidden` - Author attempting to second own motion
+- `404 Not Found` - Motion not found
+
+---
+
+### Approve or Veto Motion (Chair Only)
+
+Allows the committee chair to approve or veto a seconded motion.
+
+**Endpoint**: `POST /motions/:id/chair/approve`
+
+**Authentication**: Required (CHAIR role only)
+
+**URL Parameters**:
+
+- `id` (ObjectId) - Motion ID
+
+**Request Body**:
+
+```json
+{
+  "action": "APPROVE"
+}
+```
+
+**Valid Actions**:
+
+- `APPROVE` - Moves motion to `DEBATE` status
+- `VETO` - Moves motion to `VETOED` status
+
+**Response** (200):
+
+```json
+{
+  "_id": "65mno456pqr789012",
+  "committeeId": "65abc123def456789",
+  "authorId": "auth0|123456",
+  "title": "Approve new budget",
+  "description": "Motion to approve the 2024 budget",
+  "status": "DEBATE",
+  "originalMotionId": null,
+  "createdAt": "2024-01-12T14:00:00Z",
+  "updatedAt": "2024-01-12T14:10:00Z"
+}
+```
+
+**Error Responses**:
+
+- `400 Bad Request` - Invalid action
+- `403 Forbidden` - User does not have CHAIR role or invalid motion status
+- `404 Not Found` - Motion not found
+
+---
+
+### Open Voting (Chair Only)
+
+Opens the voting phase for a motion under debate.
+
+**Endpoint**: `POST /motions/:id/chair/open-vote`
+
+**Authentication**: Required (CHAIR role only)
+
+**URL Parameters**:
+
+- `id` (ObjectId) - Motion ID
+
+**Response** (200):
+
+```json
+{
+  "_id": "65mno456pqr789012",
+  "committeeId": "65abc123def456789",
+  "authorId": "auth0|123456",
+  "title": "Approve new budget",
+  "description": "Motion to approve the 2024 budget",
+  "status": "VOTING",
+  "originalMotionId": null,
+  "createdAt": "2024-01-12T14:00:00Z",
+  "updatedAt": "2024-01-12T15:00:00Z"
+}
+```
+
+**Notes**:
+
+- Changes motion status from `DEBATE` to `VOTING`
+
+**Error Responses**:
+
+- `403 Forbidden` - User does not have CHAIR role or invalid motion status
+- `404 Not Found` - Motion not found
+
+---
+
+### Challenge Veto (Members)
+
+Allows committee members (non-chairs) to challenge a vetoed motion, moving it into a special review state.
+
+**Endpoint**: `POST /motions/:id/challenge-veto`
+
+**Authentication**: Required (OWNER or MEMBER role; CHAIR is explicitly blocked)
+
+**URL Parameters**:
+
+- `id` (ObjectId) - Motion ID
+
+**Response** (200):
+
+```json
+{
+  "_id": "65mno456pqr789012",
+  "status": "CHALLENGING_VETO",
+  "updatedAt": "2024-01-12T15:05:00Z"
+}
+```
+
+**Notes**:
+
+- Motion must currently be `VETOED`
+- Each motion can only be challenged once (`vetoChallengeConducted` flag prevents repeats)
+- After a challenge, the chair can reconsider via `/motions/:id/chair/approve`
+
+**Error Responses**:
+
+- `403 Forbidden` - Motion not vetoed, caller is the chair, or challenge already performed
+- `404 Not Found` - Motion not found
+
+---
+
+### Check Re-Proposal Eligibility
+
+Determines whether the authenticated user may re-propose a rejected motion.
+
+**Endpoint**: `GET /motions/:id/repropose/check`
+
+**Authentication**: Required
+
+**URL Parameters**:
+
+- `id` (ObjectId) - Original motion ID
+
+**Response** (200):
+
+```json
+{
+  "eligible": true
+}
+```
+
+**Notes**:
+
+- Motion must be in `REJECTED` status
+- Caller must have previously voted `OPPOSE` on the motion
+- When not eligible, response includes a `reason` message
+
+**Error Responses**:
+
+- `400 Bad Request` - Invalid motion ID
+- `401 Unauthorized` - User not authenticated
+- `404 Not Found` - Motion not found
+
+---
+
+### Re-Propose Rejected Motion
+
+Creates a fresh motion that copies the content of a rejected motion when the caller is eligible.
+
+**Endpoint**: `POST /motions/:id/repropose`
+
+**Authentication**: Required (OWNER or MEMBER role in the committee and must have voted `OPPOSE`)
+
+**URL Parameters**:
+
+- `id` (ObjectId) - Rejected motion ID
+
+**Response** (201):
+
+```json
+{
+  "_id": "66abc123def000111",
+  "committeeId": "65abc123def456789",
+  "authorId": "auth0|789012",
+  "title": "Approve new budget",
+  "description": "Motion to approve the 2024 budget",
+  "status": "PROPOSED",
+  "originalMotionId": "65mno456pqr789012",
+  "createdAt": "2024-02-01T10:00:00Z",
+  "updatedAt": "2024-02-01T10:00:00Z"
+}
+```
+
+**Notes**:
+
+- Only available when `check` endpoint returns `eligible: true`
+- New motion starts at `PROPOSED` status and links to the prior motion via `originalMotionId`
+
+**Error Responses**:
+
+- `400 Bad Request` - Invalid motion ID
+- `401 Unauthorized` - User not authenticated
+- `403 Forbidden` - Motion not rejected or caller never voted `OPPOSE`
+- `404 Not Found` - Motion not found
+
+---
+
+## Debate Endpoints
+
+### Create Debate Entry
+
+Adds a debate comment to a motion.
+
+**Endpoint**: `POST /motions/:id/debate`
+
+**Authentication**: Required (MEMBER or OWNER role in the motion's committee)
+
+**URL Parameters**:
+
+- `id` (ObjectId) - Motion ID
+
+**Request Body**:
+
+```json
+{
+  "position": "SUPPORT",
+  "content": "I support this motion because it addresses our budget needs"
+}
+```
+
+**Required Fields**:
+
+- `position` (string) - Debate position: `SUPPORT`, `OPPOSE`, or `NEUTRAL`
+- `content` (string) - Debate comment text
+
+**Response** (200):
+
+```json
+{
+  "_id": "65stu789vwx012345",
+  "motionId": "65mno456pqr789012",
+  "authorId": "auth0|789012",
+  "position": "SUPPORT",
+  "content": "I support this motion because it addresses our budget needs",
+  "createdAt": "2024-01-12T14:20:00Z",
+  "updatedAt": "2024-01-12T14:20:00Z"
+}
+```
+
+**Notes**:
+
+- Motion must be in `DEBATE` status
+- Requires committee membership
+
+**Error Responses**:
+
+- `400 Bad Request` - Missing required fields or invalid position
+- `403 Forbidden` - User lacks required role or motion not in DEBATE status
+- `404 Not Found` - Motion not found
+
+---
+
+### List Debate Entries
+
+Retrieves all debate entries for a motion.
+
+**Endpoint**: `GET /motions/:id/debate`
+
+**Authentication**: Required
+
+**URL Parameters**:
+
+- `id` (ObjectId) - Motion ID
+
+**Response** (200):
+
+```json
+[
+  {
+    "_id": "65stu789vwx012345",
+    "motionId": "65mno456pqr789012",
+    "authorId": "auth0|789012",
+    "position": "SUPPORT",
+    "content": "I support this motion because it addresses our budget needs",
+    "createdAt": "2024-01-12T14:20:00Z",
+    "updatedAt": "2024-01-12T14:20:00Z"
+  },
+  {
+    "_id": "65stu890wxy123456",
+    "motionId": "65mno456pqr789012",
+    "authorId": "auth0|345678",
+    "position": "OPPOSE",
+    "content": "I have concerns about the budget allocation",
+    "createdAt": "2024-01-12T14:25:00Z",
+    "updatedAt": "2024-01-12T14:25:00Z"
+  }
+]
+```
+
+**Notes**:
+
+- Sorted by creation date (newest first)
+
+**Error Responses**:
+
+- `400 Bad Request` - Invalid motion ID
+
+---
+
+## Vote Endpoints
+
+### Cast Vote
+
+Casts a vote on a motion.
+
+**Endpoint**: `POST /motions/:id/vote`
+
+**Authentication**: Required (MEMBER or OWNER role in the motion's committee)
+
+**URL Parameters**:
+
+- `id` (ObjectId) - Motion ID
+
+**Request Body**:
+
+```json
+{
+  "position": "SUPPORT"
+}
+```
+
+**Required Fields**:
+
+- `position` (string) - Vote position: `SUPPORT` or `OPPOSE`
+
+**Response** (200):
+
+```json
+{
+  "_id": "65xyz123abc456789",
+  "motionId": "65mno456pqr789012",
+  "authorId": "auth0|789012",
+  "position": "SUPPORT",
+  "createdAt": "2024-01-12T15:10:00Z",
+  "updatedAt": "2024-01-12T15:10:00Z"
+}
+```
+
+**Response with Motion Resolution** (200):
+
+```json
+{
+  "vote": {
+    "_id": "65xyz123abc456789",
+    "motionId": "65mno456pqr789012",
+    "authorId": "auth0|789012",
+    "position": "SUPPORT",
+    "createdAt": "2024-01-12T15:10:00Z",
+    "updatedAt": "2024-01-12T15:10:00Z"
+  },
+  "motion": {
+    "_id": "65mno456pqr789012",
+    "status": "PASSED",
+    ...
+  }
+}
+```
+
+**Notes**:
+
+- Motion must be in `VOTING` status
+- Each user can only vote once per motion (subsequent requests return existing vote)
+- Automatically tallies votes after each submission
+- Voting thresholds depend on committee settings:
+  - **MAJORITY**: More than 50% support required
+  - **SUPERMAJORITY**: 2/3 threshold calculated as `Math.ceil((memberCount * 2) / 3)`
+- When threshold is reached, motion status changes to `PASSED` or `REJECTED`
+
+**Error Responses**:
+
+- `400 Bad Request` - Missing position or invalid value
+- `403 Forbidden` - User lacks required role or motion not in VOTING status
+- `404 Not Found` - Motion not found
+
+---
+
+### List Votes
+
+Retrieves all votes for a motion.
+
+**Endpoint**: `GET /motions/:id/vote`
+
+**Authentication**: Required
+
+**URL Parameters**:
+
+- `id` (ObjectId) - Motion ID
+
+**Response** (200):
+
+```json
+[
+  {
+    "_id": "65xyz123abc456789",
+    "motionId": "65mno456pqr789012",
+    "authorId": "auth0|789012",
+    "position": "SUPPORT",
+    "createdAt": "2024-01-12T15:10:00Z",
+    "updatedAt": "2024-01-12T15:10:00Z"
+  },
+  {
+    "_id": "65xyz234bcd567890",
+    "motionId": "65mno456pqr789012",
+    "authorId": "auth0|345678",
+    "position": "OPPOSE",
+    "createdAt": "2024-01-12T15:12:00Z",
+    "updatedAt": "2024-01-12T15:12:00Z"
+  }
+]
+```
+
+**Notes**:
+
+- Sorted by creation date (newest first)
+- If committee has `anonymousVoting: true`, only aggregate vote counts may be visible
+
+**Error Responses**:
+
+- `400 Bad Request` - Invalid motion ID
+
+---
+
+## Error Handling
+
+### Standard Error Format
+
+All error responses follow this format:
+
+```json
+{
+  "error": "Human-readable error message"
+}
+```
+
+### Common Error Scenarios
+
+#### Authentication Errors (401)
+
+```json
+{
+  "error": "Missing authorization header"
+}
+```
+
+```json
+{
+  "error": "Invalid or expired token"
+}
+```
+
+#### Permission Errors (403)
+
+```json
+{
+  "error": "author cannot second their own motion"
+}
+```
+
+```json
+{
+  "error": "motion status is not DEBATE"
+}
+```
+
+#### Validation Errors (400)
+
+```json
+{
+  "error": "title required"
+}
+```
+
+```json
+{
+  "error": "Invalid committeeId"
+}
+```
+
+#### Not Found Errors (404)
+
+```json
+{
+  "error": "Motion not found"
+}
+```
+
+#### Conflict Errors (409)
+
+```json
+{
+  "error": "username already exists"
+}
+```
+
+---
+
+## Role-Based Access Control
+
+### Committee Roles
+
+The system implements three role levels within committees: `MEMBER`, `CHAIR`, and `OWNER`. See README.md for more details about the roles and their permissions.
+
+### Role Enforcement
+
+The `authGuard` middleware enforces role-based access:
+
+```javascript
+// Example: Only OWNER can add members
+const { user, error } = await authGuard(req, ["OWNER"], committeeId);
+```
+
+**Parameters**:
+
+- `req` - HTTP request with JWT token
+- `roles` (optional) - Array of allowed roles (if omitted, any authenticated user)
+- `committeeId` (optional) - Committee to check membership against
+
+### Motion Status Transitions
+
+Motion status follows a strict lifecycle with role-based transitions:
+
+```
+PROPOSED --(non-author member seconds)--> SECONDED
+SECONDED --(chair approves)--> DEBATE --(chair opens vote)--> VOTING --(tally)--> PASSED / REJECTED
+SECONDED --(chair vetoes)--> VETOED --(member challenge)--> CHALLENGING_VETO --(chair re-approves)--> DEBATE
+CHALLENGING_VETO --(chair confirms veto)--> VETO_CONFIRMED
+REJECTED --(eligible opponent re-proposes)--> New motion in PROPOSED status
+```
+
+**Voting Thresholds**: Determined by committee's `votingThreshold` setting (MAJORITY or SUPERMAJORITY)
+
+### Valid Transitions
+
+From `PROPOSED`:
+
+- → `SECONDED` (via `/motions/:id/second`)
+
+From `SECONDED`:
+
+- → `DEBATE` (via `/motions/:id/chair/approve` with `action: "APPROVE"`)
+- → `VETOED` (via `/motions/:id/chair/approve` with `action: "VETO"`)
+
+From `VETOED`:
+
+- → `CHALLENGING_VETO` (via `/motions/:id/challenge-veto`)
+
+From `CHALLENGING_VETO`:
+
+- → `DEBATE` (via `/motions/:id/chair/approve` with `action: "APPROVE"`)
+- → `VETO_CONFIRMED` (chair records final veto outcome)
+
+From `DEBATE`:
+
+- → `VOTING` (via `/motions/:id/chair/open-vote`)
+
+From `VOTING`:
+
+- → `PASSED` (automatically when threshold for support reached)
+- → `REJECTED` (automatically when threshold for against reached)
+
+From `REJECTED`:
+
+- → (new motion) `PROPOSED` (via `/motions/:id/repropose` when eligibility is met)
+
+---
+
+## Data Validation
+
+### String Normalization
+
+All string fields undergo normalization:
+
+- Trimmed of leading/trailing whitespace
+- Empty strings converted to `null`
+- Maintains data consistency
+
+### ID Validation
+
+All ObjectId parameters are validated:
+
+- Must be valid MongoDB ObjectId format
+- Returns `400 Bad Request` if invalid
+
+### Duplicate Prevention
+
+- **Users**: Username uniqueness enforced (case-sensitive)
+- **Memberships**: One membership per user per committee
+- **Votes**: One vote per user per motion
+
+---
+
+## Database Connection
+
+All serverless functions automatically connect to MongoDB before processing requests:
+
+```javascript
+export default async function (req, context) {
+  await connectDatabase();
+  return router.handle(req, context);
+}
+```
