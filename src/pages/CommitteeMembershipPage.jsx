@@ -16,6 +16,7 @@ import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import PersonAddAltIcon from '@mui/icons-material/PersonAddAlt';
 import HowToVoteIcon from '@mui/icons-material/HowToVote';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import LoadingPage from './LoadingPage.jsx';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useMembershipsApi } from '../utils/membershipsApi';
 import { useUsersApi } from '../utils/usersApi';
@@ -243,9 +244,13 @@ function CommitteeMembershipPage() {
         ];
     }, [handleRemove, isOwner]);
 
+    if (loading) {
+        return <LoadingPage/>;
+    }
+
     return (
         <Paper sx={{ m: 5, p: 3 }}>
-            {!loading && !hasChair && (
+            {!hasChair && (
                 <Alert severity="warning" sx={{ mb: 2 }}>
                     WARNING: This committee currently doesn't have a presiding chair
                 </Alert>

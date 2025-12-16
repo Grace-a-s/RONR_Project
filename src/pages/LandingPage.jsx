@@ -13,12 +13,14 @@ import AssignmentIcon from '@mui/icons-material/Assignment';
 import ForumIcon from '@mui/icons-material/Forum';
 import HowToVoteIcon from '@mui/icons-material/HowToVote';
 import { useAuth0 } from '@auth0/auth0-react';
+import { useUsersApi } from '../utils/usersApi';
+import { useCommitteesApi } from '../utils/committeesApi';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
+import LoadingPage from './LoadingPage.jsx';
 import Alert from '@mui/material/Alert';
 import CircularProgress from '@mui/material/CircularProgress';
 import Stack from '@mui/material/Stack';
 import Paper from '@mui/material/Paper';
-import { useUsersApi } from '../utils/usersApi';
-import { useCommitteesApi } from '../utils/committeesApi';
 import { useMotionsApi } from '../utils/motionsApi';
 
 
@@ -35,6 +37,8 @@ function LandingPage() {
   const syncedUserIdRef = useRef(null);
   const { listCommittees, createCommittee } = useCommitteesApi();
   const { listMotions } = useMotionsApi();
+
+  const polling_interval = 60000; // 1 min
 
   const normalizeCommittee = useCallback((committee) => ({
     id: committee?._id ? String(committee._id) : String(committee?.id || Date.now()),
@@ -84,6 +88,10 @@ function LandingPage() {
     fetchCommittees();
   }, [fetchCommittees]);
 
+  useAutoRefresh(() => {
+    fetchCommittees();
+  }, polling_interval,[fetchCommittees]);
+
   const handleCreate = async (e) => {
     e.preventDefault();
     const trimmedName = name.trim();
@@ -131,6 +139,7 @@ function LandingPage() {
               setProfile(existingUser);
             }
           }
+          console.log("Found existing user profile with username ", existingUser.username);
         } catch (lookupErr) {
           if (lookupErr?.status !== 404) {
             console.error('Failed to load existing user profile', lookupErr);
@@ -146,6 +155,7 @@ function LandingPage() {
           syncedUserIdRef.current = userId;
           setProfile((prev) => prev || updated || null);
         }
+        console.log("Updating user profile");
       } catch (err) {
         console.error('Failed to sync user profile', err);
       }
@@ -167,6 +177,12 @@ function LandingPage() {
     // navigate to committee page (id encoded)
     navigate(`/committee/${encodeURIComponent(c.id)}`);
   };
+
+  const pageLoading = !profile || isLoading || loadingCommittees;
+
+  if (pageLoading) {
+    return <LoadingPage/>;
+  }
 
   return (
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
