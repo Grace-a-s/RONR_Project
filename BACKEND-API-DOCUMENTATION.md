@@ -217,6 +217,10 @@ retrieve the username of user (based on ID, the unique identifier for user entri
 
 **Authentication**: Not required
 
+**URL Parameters**:
+
+- `id` - ObjectId string of the user document to look up
+
 **Response** (200):
 ```json
 {"username": "johndoe"}
