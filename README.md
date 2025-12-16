@@ -118,7 +118,8 @@ From the committee page we can create motions and click on "view details" to go 
 <img width="1920" height="1128" alt="Screenshot 2025-12-16 122334" src="https://github.com/user-attachments/assets/0d24f802-312f-4c1a-b2f8-5c8e4633a199" />
 <img width="1920" height="1128" alt="Screenshot 2025-12-16 122612" src="https://github.com/user-attachments/assets/c6f4c107-ffcb-4468-a069-5a63abcf7bd1" />
 
-Another user will then second the motion and will be prompted to wait for the chair before debate begins. Next, a chair must approve or deny(veto). If approved, debate begins. 
+Another user will then second the motion and will be prompted to wait for the chair before debate begins. Next, a chair must approve or deny(veto). If approved, debate begins.  
+
 <br>Here is the chair's POV
 <img width="1920" height="1128" alt="Screenshot 2025-12-16 122831" src="https://github.com/user-attachments/assets/78d9978f-755f-4a6c-95e3-5d1cbd2338ec" />
 
@@ -127,7 +128,8 @@ You can now debate, selecting your position and hitting send. Select view debate
 <img width="1920" height="1128" alt="Screenshot 2025-12-16 123507" src="https://github.com/user-attachments/assets/10a84320-ed4b-477a-95e7-6118e0ae8c54" />
 <img width="1920" height="1128" alt="Screenshot 2025-12-16 123523" src="https://github.com/user-attachments/assets/7b2d7b76-664c-40a3-a2e5-4e43b559725e" />
 
-Once the chair determines a motion has been sufficiently debated they can then begin the vote <br>
+Once the chair determines a motion has been sufficiently debated they can then begin the vote <br>  
+
 Chair POV: 
 <img width="960" height="564" alt="Screenshot 2025-12-16 124356" src="https://github.com/user-attachments/assets/873cb1d3-eae9-45d9-9ce6-f514eaa0d4cb" />
 
@@ -144,18 +146,19 @@ The voting panel shows where the vote currently is and tells the user if they ha
 If the preferred procedures are a 2/3 vote or anonymous voting the Chair can change the committee's voting settings on the manage/view membership page.
 <img width="1920" height="1128" alt="Screenshot 2025-12-16 130151" src="https://github.com/user-attachments/assets/0b9cedaf-845a-41d5-8967-3eedd18bb563" />
 
-After the threshold to pass is reached we can see that it has passed, if it is not passed it is marked as rejected. 
+After the threshold to pass is reached we can see that it has passed, if it is not passed it is marked as rejected. If enough oppose votes occur to make it impossible to pass it will be rejected. Ties are also rejected. (ex. 4 voting members, 2 support, 2 oppose) 
 <img width="1920" height="1128" alt="Screenshot 2025-12-16 131010" src="https://github.com/user-attachments/assets/c6a0b535-8fd2-45b5-81f2-955d1d96b85b" />
 If a motion is rejected there will be an option to repropose for members who voted on the motion.
-<img width="1920" height="1128" alt="Screenshot 2025-12-16 132213" src="https://github.com/user-attachments/assets/9c4565c3-b318-4813-8db9-aac4972173d5" />
+<img width="1920" height="1128" alt="Screenshot 2025-12-16 144144" src="https://github.com/user-attachments/assets/c686681b-61bb-42fb-b85a-246acfbc5155" />
 The reproposed motion will be marked as such
-<img width="1920" height="1128" alt="Screenshot 2025-12-16 132241" src="https://github.com/user-attachments/assets/3959a6cc-875d-4af0-a862-ddb9280e5620" />
+<img width="1920" height="1128" alt="Screenshot 2025-12-16 144510" src="https://github.com/user-attachments/assets/58619988-978c-44c4-890f-b622e83cd4c7" />
 
 If the chair decides to veto this (or any) motion the users can vote to override the chair with a supermajority. If the vote is successful the motion will move to debate. 
 <img width="1920" height="1128" alt="Screenshot 2025-12-16 133016" src="https://github.com/user-attachments/assets/6c1a3516-34f1-400c-a003-09e783486676" />
 <img width="1920" height="1128" alt="Screenshot 2025-12-16 133114" src="https://github.com/user-attachments/assets/1846d037-ac91-4681-a975-9b328b466245" />
 
-User can also navigate to user roles to read more about what they can and cannot do. 
+User can also navigate to user roles to read more about what they can and cannot do.  
+
 <img width="219" height="153" alt="Screenshot 2025-12-16 140413" src="https://github.com/user-attachments/assets/80e6e2a8-2856-43a4-b644-79083aceb3db" />
 <img width="1920" height="1128" alt="Screenshot 2025-12-16 140259" src="https://github.com/user-attachments/assets/814ed81f-d1b5-435a-847c-c89b4004c5fd" />
 
