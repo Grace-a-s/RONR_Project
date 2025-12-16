@@ -282,7 +282,7 @@ function MotionPage() {
   const isChair = userRole === 'CHAIR';
   const isSecondedStatus = motion && motion.status === 'SECONDED';
   const isDebateStatus = motion && motion.status === 'DEBATE';
-  const isDebateOrLater = motion && ['DEBATE', 'VOTING', 'PASSED', 'REJECTED', 'VETOED'].includes(motion.status);
+  const isDebateOrLater = motion && ['DEBATE', 'VOTING', 'PASSED', 'REJECTED'].includes(motion.status);
   const isVotingOrLater = motion && ['VOTING', 'PASSED', 'REJECTED'].includes(motion.status);
   if (loading) return <Container sx={{ py: 6 }}><Typography>Loading...</Typography></Container>;
   if (!motion) return <Container sx={{ py: 6 }}><Typography>Motion not found</Typography></Container>;
