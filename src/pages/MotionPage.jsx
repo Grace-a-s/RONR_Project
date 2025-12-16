@@ -535,75 +535,45 @@ function MotionPage() {
                     pb: { xs: '140px', md: '100px' },
                   }}
                 >
-                  {debates.map((entry, i) => (
-                    <Paper key={entry._id || i} variant="outlined" sx={{ p: 2, display: 'flex', gap: 2, alignItems: 'flex-start' }}>
-                      <Avatar sx={{ bgcolor: (theme) => theme.palette.primary.main, width: 40, height: 40, flexShrink: 0 }}>
-                        {entry.authorId ? String(entry.authorId)[0].toUpperCase() : 'M'}
-                      </Avatar>
-
-                      <Box sx={{ flex: 1 }}>
-                        <Typography variant="caption" color="text.secondary">
-                          {entry.authorId || 'Member'} · {entry.createdAt ? new Date(entry.createdAt).toLocaleString() : `#${i + 1}`}
-                          {entry.position && (
-                            <Chip 
-                              label={entry.position} 
-                              size="small" 
-                              sx={{ ml: 1 }}
-                              color={
-                                entry.position === 'SUPPORT' ? 'success' :
-                                entry.position === 'OPPOSE' ? 'error' :
-                                'default'
-                              }
-                            />
-                          )}
-                        </Typography>
-
-                        <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', mt: 1 }}>
-                          {entry.content}
-                        </Typography>
-                      </Box>
-                    </Paper>
-                  ))}
-                  {debates.length === 0 && (
+                  {debates.length === 0 ? (
                     <Typography color="text.secondary" align="center">No debate entries yet.</Typography>
                   ) : (
-                    debates.map((entry, i) => (
-                      <Paper key={entry._id || i} variant="outlined" sx={{ p: 2, display: 'flex', gap: 2, alignItems: 'flex-start' }}>
-                        <Avatar sx={{ bgcolor: (theme) => theme.palette.primary.main, width: 40, height: 40, flexShrink: 0 }}>
-                          {entry.authorId ? String(typeof entry.authorId === 'object' ? entry.authorId._id : entry.authorId)[0].toUpperCase() : 'M'}
-                        </Avatar>
+                    debates.map((entry, i) => {
+                      const rawId = entry.authorId;
+                      const id = rawId && typeof rawId === 'object' ? rawId._id : rawId;
+                      const mapEntry = id ? debateUserMap[id] : null;
+                      const displayName = mapEntry?.loading ? 'Loading...' : mapEntry?.username || 'Member';
 
-                        <Box sx={{ flex: 1 }}>
-                          <Typography variant="caption" color="text.secondary">
-                            {(() => {
-                              const rawId = entry.authorId;
-                              const id = rawId && typeof rawId === 'object' ? rawId._id : rawId;
-                              const mapEntry = id ? debateUserMap[id] : null;
-                              if (mapEntry && mapEntry.loading) return 'Loading...';
-                              if (mapEntry && mapEntry.username) return mapEntry.username;
-                              return 'Member';
-                            })()} · {entry.createdAt ? new Date(entry.createdAt).toLocaleString() : `#${i + 1}`}
-                            
-                            {entry.position && (
-                              <Chip 
-                                label={entry.position} 
-                                size="small" 
-                                sx={{ ml: 1 }}
-                                color={
-                                  entry.position === 'SUPPORT' ? 'success' :
-                                  entry.position === 'OPPOSE' ? 'error' :
-                                  'default'
-                                }
-                              />
-                            )}
-                          </Typography>
+                      return (
+                        <Paper key={entry._id || i} variant="outlined" sx={{ p: 2, display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+                          <Avatar sx={{ bgcolor: (theme) => theme.palette.primary.main, width: 40, height: 40, flexShrink: 0 }}>
+                            {id ? String(id)[0].toUpperCase() : 'M'}
+                          </Avatar>
 
-                          <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', mt: 1 }}>
-                            {entry.content}
-                          </Typography>
-                        </Box>
-                      </Paper>
-                    ))
+                          <Box sx={{ flex: 1 }}>
+                            <Typography variant="caption" color="text.secondary">
+                              {displayName} · {entry.createdAt ? new Date(entry.createdAt).toLocaleString() : `#${i + 1}`}
+                              {entry.position && (
+                                <Chip
+                                  label={entry.position}
+                                  size="small"
+                                  sx={{ ml: 1 }}
+                                  color={
+                                    entry.position === 'SUPPORT' ? 'success' :
+                                    entry.position === 'OPPOSE' ? 'error' :
+                                    'default'
+                                  }
+                                />
+                              )}
+                            </Typography>
+
+                            <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', mt: 1 }}>
+                              {entry.content}
+                            </Typography>
+                          </Box>
+                        </Paper>
+                      );
+                    })
                   )}
                 </Box>
               </Paper>
