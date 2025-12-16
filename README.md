@@ -2,7 +2,7 @@
 
 A web application designed to facilitate asynchronous committee-based decision-making using Robert's Rules of Order. This platform enables committees to propose, debate, and vote on motions with proper parliamentary procedure, all in an asynchronous digital environment.
 
-**Live Website**: [Insert website link]
+**Live Website**: https://bobsrules.netlify.app/
 
 **Demo**: [Insert demo video]
 
