@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useAuth0 } from "@auth0/auth0-react";
 import Drawer from '@mui/material/Drawer';
 import Box from '@mui/material/Box';
@@ -37,8 +37,7 @@ function VotingPanel({ open, onClose, motion, committee, onVoteSuccess }) {
 
   const committeeThreshold = committee?.votingThreshold || 'MAJORITY';
 
-  useEffect(() => {
-   const polling_interval = 3000; 
+  const polling_interval = 3000;
 
   useAutoRefresh(() => {
     if (open && motion) {
