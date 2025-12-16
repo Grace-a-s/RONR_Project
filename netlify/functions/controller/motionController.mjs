@@ -1,6 +1,7 @@
 import Motion from '../model/Motion.mjs';
 import Committee from '../model/Committee.mjs';
 import Vote from '../model/Vote.mjs';
+import Membership from '../model/Membership.mjs';
 import mongoose from 'mongoose';
 
 export async function createMotion(user, committeeId, body) {
@@ -72,6 +73,45 @@ export async function approveMotion(user, motionId, body) {
     return new Response(JSON.stringify({ error: 'invalid chair action' }), { status: 400, headers: { 'content-type': 'application/json' } });
 }
 
+export async function challengeVeto(user, motionId) {
+	try {
+		if (!motionId || !mongoose.Types.ObjectId.isValid(motionId)) {
+			return new Response(JSON.stringify({ error: 'Invalid motionId' }), { status: 400, headers: { 'content-type': 'application/json' } });
+		}
+
+		const motion = await Motion.findById(motionId);
+		if (!motion) return new Response(JSON.stringify({ error: 'Motion not found' }), { status: 404, headers: { 'content-type': 'application/json' } });
+
+		// Verify motion is in VETOED status
+		if (motion.status !== 'VETOED') {
+			return new Response(JSON.stringify({ error: 'Motion is not vetoed' }), { status: 403, headers: { 'content-type': 'application/json' } });
+		}
+
+		// Check if a veto challenge has already been conducted
+		if (motion.vetoChallengeConducted) {
+			return new Response(JSON.stringify({ error: 'Veto challenge already conducted for this motion' }), { status: 403, headers: { 'content-type': 'application/json' } });
+		}
+
+		// Verify user is not the Chair (additional safety check)
+		const committeeId = motion.committeeId;
+		const membership = await Membership.findOne({ userId: user.sub, committeeId }).lean();
+		if (membership && membership.role === 'CHAIR') {
+			return new Response(JSON.stringify({ error: 'Chair cannot challenge veto' }), { status: 403, headers: { 'content-type': 'application/json' } });
+		}
+
+		// Update motion status to CHALLENGING_VETO
+		const updated = await Motion.findByIdAndUpdate(
+			motionId,
+			{ status: 'CHALLENGING_VETO' },
+			{ new: true }
+		).lean();
+
+		return new Response(JSON.stringify(updated), { status: 200, headers: { 'content-type': 'application/json' } });
+	} catch (err) {
+		return new Response(JSON.stringify({ error: err.toString() }), { status: 400, headers: { 'content-type': 'application/json' } });
+	}
+}
+
 export async function openVote(user, motionId) {
     return updateMotionStatus(motionId, "VOTING");
 }
@@ -88,8 +128,8 @@ async function updateMotionStatus(motionId, newMotionStatus) {
 		if (!newMotionStatus) 
             return new Response(JSON.stringify({ error: 'status required' }), { status: 400, headers: { 'content-type': 'application/json' } });
 
-		const allowed = ["SECONDED", "VETOED", "DEBATE", "VOTING", "PASSED", "REJECTED"];
-		if (!allowed.includes(newMotionStatus)) 
+		const allowed = ["SECONDED", "VETOED", "CHALLENGING_VETO", "DEBATE", "VOTING", "PASSED", "REJECTED", "VETO_CONFIRMED"];
+		if (!allowed.includes(newMotionStatus))
             return new Response(JSON.stringify({ error: 'invalid status' }), { status: 400, headers: { 'content-type': 'application/json' } });
 
 
@@ -112,10 +152,18 @@ async function checkValidMotionStatus(motionId, newMotionStatus) {
 
     if (newMotionStatus === "SECONDED") {
         return currentMotionStatus === "PROPOSED";
-    } 
-    
-    if (newMotionStatus === "VETOED" || newMotionStatus === "DEBATE") {
+    }
+
+    if (newMotionStatus === "VETOED") {
         return currentMotionStatus === "SECONDED";
+    }
+
+    if (newMotionStatus === "CHALLENGING_VETO") {
+        return currentMotionStatus === "VETOED";
+    }
+
+    if (newMotionStatus === "DEBATE") {
+        return currentMotionStatus === "SECONDED" || currentMotionStatus === "CHALLENGING_VETO";
     }
 
     if (newMotionStatus === "VOTING") {
@@ -124,6 +172,10 @@ async function checkValidMotionStatus(motionId, newMotionStatus) {
 
     if (newMotionStatus === "PASSED" || newMotionStatus === "REJECTED") {
         return currentMotionStatus === "VOTING";
+    }
+
+    if (newMotionStatus === "VETO_CONFIRMED") {
+        return currentMotionStatus === "CHALLENGING_VETO";
     }
 }
 

@@ -10,7 +10,13 @@ async function tallyAndApplyTwoThirds(motion) {
 	const motionId = motion._id;
 	const committeeId = motion.committeeId;
 
-	const memberCount = await Membership.countDocuments({ committeeId });
+	// Get all memberships EXCEPT the Chair (Chairs are excluded from voting)
+	const nonChairMemberships = await Membership.find({
+		committeeId,
+		role: { $ne: 'CHAIR' }
+	}).lean();
+
+	const memberCount = nonChairMemberships.length;
 	if (memberCount <= 0) return null;
 
 	// Fetch committee to get voting threshold
@@ -35,6 +41,55 @@ async function tallyAndApplyTwoThirds(motion) {
 	return null;
 }
 
+// Special tally function for veto challenge votes - excludes Chair and uses fixed 2/3 threshold
+async function tallyVetoChallenge(motion) {
+	if (!motion) return null;
+	const motionId = motion._id;
+	const committeeId = motion.committeeId;
+
+	// Get all memberships EXCEPT the Chair
+	const nonChairMemberships = await Membership.find({
+		committeeId,
+		role: { $ne: 'CHAIR' }  // Exclude CHAIR role
+	}).lean();
+
+	const eligibleMemberCount = nonChairMemberships.length;
+	if (eligibleMemberCount <= 0) return null;
+
+	// Count votes from non-Chair members only
+	const allVotes = await Vote.find({ motionId }).lean();
+
+	// Filter out any votes from Chair (safety measure)
+	const chairMembership = await Membership.findOne({ committeeId, role: 'CHAIR' }).lean();
+	const chairUserId = chairMembership ? chairMembership.userId : null;
+
+	const validVotes = chairUserId
+		? allVotes.filter(v => v.authorId !== chairUserId)
+		: allVotes;
+
+	const supportCount = validVotes.filter(v => v.position === 'SUPPORT').length;
+	const opposeCount = validVotes.filter(v => v.position === 'OPPOSE').length;
+
+	// FIXED 2/3 threshold (SUPERMAJORITY) regardless of committee settings
+	const threshold = Math.ceil((eligibleMemberCount * 2) / 3);
+
+	// Mark that challenge has been conducted
+	await Motion.findByIdAndUpdate(motionId, { vetoChallengeConducted: true });
+
+	// SUPPORT votes mean "overrule the veto" → motion goes to DEBATE
+	if (supportCount >= threshold) {
+		return await Motion.findByIdAndUpdate(motionId, { status: 'DEBATE' }, { new: true }).lean();
+	}
+
+	// OPPOSE votes mean "uphold the veto" → motion status becomes VETO_CONFIRMED
+	// Also trigger if threshold votes reached for OPPOSE
+	if (opposeCount >= threshold) {
+		return await Motion.findByIdAndUpdate(motionId, { status: 'VETO_CONFIRMED' }, { new: true }).lean();
+	}
+
+	return null;
+}
+
 export async function createVote(user, motionId, body) {
 	try {
 		if (!body) return new Response(JSON.stringify({ error: 'body required' }), { status: 400, headers: { 'content-type': 'application/json' } });
@@ -50,12 +105,22 @@ export async function createVote(user, motionId, body) {
 		const motion = await Motion.findById(motionId);
 		if (!motion) return new Response(JSON.stringify({ error: 'Motion not found' }), { status: 404, headers: { 'content-type': 'application/json' } });
 
-		if (motion.status !== "VOTING")
-			return new Response(JSON.stringify({ error: 'motion status is not VOTING' }), { status: 403, headers: { 'content-type': 'application/json' } });
+		if (motion.status !== "VOTING" && motion.status !== "CHALLENGING_VETO")
+			return new Response(JSON.stringify({ error: 'motion is not open for voting' }), { status: 403, headers: { 'content-type': 'application/json' } });
 
 
 		const authorId = (user && user.sub) ? user.sub : body.authorId;
 		if (!authorId) return new Response(JSON.stringify({ error: 'authorId required' }), { status: 400, headers: { 'content-type': 'application/json' } });
+
+		// Chairs cannot vote on any motion
+		const membership = await Membership.findOne({
+			userId: authorId,
+			committeeId: motion.committeeId
+		}).lean();
+
+		if (membership && membership.role === 'CHAIR') {
+			return new Response(JSON.stringify({ error: 'Chair cannot vote' }), { status: 403, headers: { 'content-type': 'application/json' } });
+		}
 
 		// prevent duplicate votes from same user for a motion
 		const existing = await Vote.findOne({ motionId, authorId });
@@ -64,9 +129,18 @@ export async function createVote(user, motionId, body) {
 
 		const vote = await Vote.create({ motionId, authorId, position });
 
-		// After each vote, check the 2/3rd threshold has been met for support/oppose
+		// After each vote, check if threshold has been met
 		try {
-			const updatedMotion = await tallyAndApplyTwoThirds(motion);
+			let updatedMotion;
+
+			// Use special tally function for veto challenges
+			if (motion.status === 'CHALLENGING_VETO') {
+				updatedMotion = await tallyVetoChallenge(motion);
+			} else {
+				// Use regular tally for normal votes
+				updatedMotion = await tallyAndApplyTwoThirds(motion);
+			}
+
 			if (updatedMotion) {
 				return new Response(JSON.stringify({ vote, motion: updatedMotion }), { status: 200, headers: { 'content-type': 'application/json' } });
 			}

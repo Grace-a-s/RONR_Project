@@ -25,7 +25,7 @@ import HowToVoteIcon from '@mui/icons-material/HowToVote';
 import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty';
 import { useAuth0 } from "@auth0/auth0-react";
 import VotingPanel from '../components/VotingPanel';
-import { openVoting, chairApproveMotion } from '../lib/api';
+import { openVoting, chairApproveMotion, challengeVeto } from '../lib/api';
 import { useMotionsApi } from '../utils/motionsApi';
 import { useMembershipsApi } from '../utils/membershipsApi';
 import { useCommitteesApi } from '../utils/committeesApi';
@@ -67,6 +67,7 @@ function MotionPage() {
   const [checkingEligibility, setCheckingEligibility] = useState(false);
   const [reproposing, setReproposing] = useState(false);
   const [originalMotion, setOriginalMotion] = useState(null);
+  const [challengingVeto, setChallengingVeto] = useState(false);
 
   const polling_interval = 5000;  // 5 seconds - reduced polling frequency for better performance
 
@@ -364,6 +365,22 @@ function MotionPage() {
     }
   };
 
+  const handleChallengeVeto = async () => {
+    if (!motion) return;
+
+    try {
+      setChallengingVeto(true);
+      const token = await getAccessTokenSilently();
+      const updatedMotion = await challengeVeto(motionId, token);
+      setMotion(updatedMotion);
+    } catch (error) {
+      console.error('Failed to challenge veto:', error);
+      alert(error.message || 'Failed to challenge veto.');
+    } finally {
+      setChallengingVeto(false);
+    }
+  };
+
   // Check if motion has been seconded based on status
   const isSeconded = motion && motion.status !== 'PROPOSED';
   const isChair = userRole === 'CHAIR';
@@ -371,6 +388,9 @@ function MotionPage() {
   const isDebateStatus = motion && motion.status === 'DEBATE';
   const isDebateOrLater = motion && ['DEBATE', 'VOTING', 'PASSED', 'REJECTED'].includes(motion.status);
   const isVotingOrLater = motion && ['VOTING', 'PASSED', 'REJECTED'].includes(motion.status);
+  const isVetoedStatus = motion && motion.status === 'VETOED';
+  const isChallengingVeto = motion && motion.status === 'CHALLENGING_VETO';
+  const isVetoConfirmed = motion && motion.status === 'VETO_CONFIRMED';
 
   // Determine whether the first N debate entries have resolved usernames
   const debateInitialBatchSize = Math.min(5, debates.length);
@@ -411,8 +431,17 @@ function MotionPage() {
                 <Typography variant="h5">{motion.title}</Typography>
                 <Chip
                   label={motion.status || 'PROPOSED'}
-                  {...getChipSxForStatus(motion.status || 'PROPOSED')}
-                  sx={{ fontWeight: 600, ...(getChipSxForStatus(motion.status || 'PROPOSED')?.sx || {}) }}
+                  color={
+                    motion.status === 'VOTING' ? 'primary' :
+                    motion.status === 'PASSED' ? 'success' :
+                    motion.status === 'REJECTED' ? 'error' :
+                    motion.status === 'DEBATE' ? 'warning' :
+                    motion.status === 'VETOED' ? 'error' :
+                    motion.status === 'CHALLENGING_VETO' ? 'warning' :
+                    motion.status === 'VETO_CONFIRMED' ? 'error' :
+                    'default'
+                  }
+                  sx={{ fontWeight: 600 }}
                 />
               </Box>
               <Box sx={{ bgcolor: 'white', borderRadius: 1, mt: 2, p: 2 }}>
@@ -469,6 +498,38 @@ function MotionPage() {
                         '& .MuiChip-icon': { color: 'white' }
                       }}
                     />
+                  ) : !isChair && isVetoedStatus && !motion.vetoChallengeConducted ? (
+                    /* Non-chair members can challenge veto */
+                    <Button
+                      variant="contained"
+                      color="warning"
+                      onClick={handleChallengeVeto}
+                      disabled={challengingVeto}
+                    >
+                      {challengingVeto ? <CircularProgress size={20} /> : 'Move to Overrule Veto'}
+                    </Button>
+                  ) : isVetoedStatus || isVetoConfirmed ? (
+                    /* Show status message for vetoed/veto confirmed */
+                    <Chip
+                      label={isVetoConfirmed ? "Veto Upheld" : "Vetoed by Chair"}
+                      sx={{
+                        fontWeight: 500,
+                        bgcolor: '#FF57BB',
+                        color: 'white'
+                      }}
+                    />
+                  ) : isChallengingVeto ? (
+                    /* Show active veto challenge status */
+                    <Chip
+                      icon={<HowToVoteIcon sx={{ color: 'white !important' }} />}
+                      label="Veto Challenge Vote In Progress"
+                      sx={{
+                        fontWeight: 500,
+                        bgcolor: '#FFA500',
+                        color: 'white',
+                        '& .MuiChip-icon': { color: 'white' }
+                      }}
+                    />
                   ) : motion.status === 'REJECTED' ? (
                     /* Show re-propose button for REJECTED motions if user voted OPPOSE */
                     <>
@@ -494,7 +555,7 @@ function MotionPage() {
                         {seconding ? <CircularProgress size={20} /> : isSeconded ? 'Seconded' : 'Second'}
                       </Button>
 
-                      {isDebateOrLater && (
+                      {isDebateOrLater && !isVetoedStatus && !isVetoConfirmed && (
                         <Button variant="contained" onClick={toggleDebate}>
                           View Debate
                         </Button>
@@ -503,8 +564,8 @@ function MotionPage() {
                   )}
                 </Box>
 
-                {/* Only show Voting button when motion is in VOTING or later */}
-                {isVotingOrLater && (
+                {/* Show Voting button when motion is in VOTING, CHALLENGING_VETO, or later */}
+                {(isVotingOrLater || isChallengingVeto) && (
                   <Button
                     variant="outlined"
                     onClick={() => setVotingPanelOpen(true)}

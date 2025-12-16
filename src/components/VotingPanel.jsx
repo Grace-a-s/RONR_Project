@@ -36,6 +36,7 @@ function VotingPanel({ open, onClose, motion, committee, onVoteSuccess }) {
   const [opposeCount, setOpposeCount] = useState(0);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
   const [isAnonymous, setIsAnonymous] = useState(false);
+  const [isVetoChallenge, setIsVetoChallenge] = useState(false);
 
   // username cache and in-flight promise map to dedupe requests
   const usernameCacheRef = useRef({});
@@ -72,6 +73,11 @@ function VotingPanel({ open, onClose, motion, committee, onVoteSuccess }) {
       const token = await getAccessTokenSilently();
       const votesData = await getVotes(motion._id, token);
 
+      // Check if this is a veto challenge vote
+      const isChallenge = motion.status === 'CHALLENGING_VETO';
+      setIsVetoChallenge(isChallenge);
+
+      // Ensure votesData is an array
       const validVotes = Array.isArray(votesData) ? votesData : [];
       setVotes(validVotes);
 
@@ -92,6 +98,7 @@ function VotingPanel({ open, onClose, motion, committee, onVoteSuccess }) {
       setOpposeCount(0);
       setUserVote(null);
       setIsAnonymous(false);
+      setIsVetoChallenge(false);
       console.error('Failed to fetch votes:', error);
       setSnackbar({ open: true, message: error.message || 'Failed to fetch votes', severity: 'error' });
     }
@@ -101,13 +108,15 @@ function VotingPanel({ open, onClose, motion, committee, onVoteSuccess }) {
     try {
       const token = await getAccessTokenSilently();
       const memberships = await getCommitteeMemberCount(motion.committeeId, token);
-      if (Array.isArray(memberships)) {
-        // Exclude non-voting members (CHAIR role) from the total
-        const votingMembers = memberships.filter((m) => String(m?.role || '').toUpperCase() !== 'CHAIR');
-        setTotalMembers(votingMembers.length);
-      } else {
-        setTotalMembers(0);
+
+      let count = Array.isArray(memberships) ? memberships.length : 0;
+
+      // For veto challenges, exclude Chair from count
+      if (isVetoChallenge && count > 0) {
+        count = count - 1; // Subtract 1 for the Chair
       }
+
+      setTotalMembers(count);
     } catch (error) {
       console.error('Failed to fetch member count:', error);
     }
@@ -180,11 +189,14 @@ function VotingPanel({ open, onClose, motion, committee, onVoteSuccess }) {
     }
   };
 
-  const threshold = committeeThreshold === "SUPERMAJORITY"
+  // For veto challenges, ALWAYS use 2/3 threshold regardless of committee settings
+  const threshold = isVetoChallenge
     ? Math.ceil((totalMembers * 2) / 3)
-    : Math.floor(totalMembers / 2) + 1;
-  const thresholdText = committeeThreshold === "SUPERMAJORITY" ? "2/3" : "majority";
-  const thresholdDescription = committeeThreshold === "SUPERMAJORITY" ? "2/3" : "majority";
+    : (committeeThreshold === "SUPERMAJORITY"
+        ? Math.ceil((totalMembers * 2) / 3)
+        : Math.floor(totalMembers / 2) + 1);
+  const thresholdText = isVetoChallenge ? "2/3 (Veto Challenge)" : (committeeThreshold === "SUPERMAJORITY" ? "2/3" : "majority");
+  const thresholdDescription = isVetoChallenge ? "2/3 (required for veto challenges)" : (committeeThreshold === "SUPERMAJORITY" ? "2/3" : "majority");
 
   const supportProgress = totalMembers > 0 ? (supportCount / threshold) * 100 : 0;
   const opposeProgress = totalMembers > 0 ? (opposeCount / threshold) * 100 : 0;
@@ -231,7 +243,9 @@ function VotingPanel({ open, onClose, motion, committee, onVoteSuccess }) {
       >
         <Box sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Typography variant="h6">Vote on Motion</Typography>
+            <Typography variant="h6">
+              {isVetoChallenge ? 'Veto Challenge Vote' : 'Vote on Motion'}
+            </Typography>
             <IconButton onClick={onClose} size="small">
               <CloseIcon />
             </IconButton>
@@ -240,6 +254,18 @@ function VotingPanel({ open, onClose, motion, committee, onVoteSuccess }) {
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
             {motion?.title}
           </Typography>
+
+          {isVetoChallenge && (
+            <Box sx={{ mb: 2, p: 2, bgcolor: '#fff3cd', borderRadius: 1 }}>
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                Veto Challenge Vote
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Requires 2/3 supermajority to overrule veto. Chair is excluded from voting.
+                SUPPORT = Overrule veto, OPPOSE = Uphold veto.
+              </Typography>
+            </Box>
+          )}
 
           <Divider sx={{ mb: 3 }} />
 
@@ -315,7 +341,7 @@ function VotingPanel({ open, onClose, motion, committee, onVoteSuccess }) {
                 </Typography>
               )}
             </Box>
-          ) : motion?.status === 'VOTING' ? (
+          ) : (motion?.status === 'VOTING' || motion?.status === 'CHALLENGING_VETO') ? (
             <Box sx={{ mb: 3 }}>
               <Typography variant="subtitle2" gutterBottom>
                 Cast Your Vote
